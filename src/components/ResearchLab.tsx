@@ -4,6 +4,7 @@ import {
   parseReactionEquation,
   simulateEnsemble,
   simulateGillespie,
+  convertMacroscopicRateConstant,
   validateNetwork,
   createExperimentRecord,
   serializeExperiment,
@@ -58,6 +59,9 @@ export const ResearchLab: React.FC = () => {
   const [populationPerCoefficient, setPopulationPerCoefficient] = useState('80');
   const [duration, setDuration] = useState('10');
   const [rate, setRate] = useState('0.08');
+  const [macroscopicRate, setMacroscopicRate] = useState('1');
+  const [volumeLiters, setVolumeLiters] = useState('1e-15');
+  const [conversionFeedback, setConversionFeedback] = useState<string | null>(null);
   const [seed, setSeed] = useState('42');
   const [replicates, setReplicates] = useState('200');
   const [ensembleResult, setEnsembleResult] = useState<EnsembleResult | null>(null);
@@ -98,6 +102,8 @@ export const ResearchLab: React.FC = () => {
 
       setActiveNetwork(candidate);
       setActiveEquation(parsed.source);
+      setRate('0.08');
+      setConversionFeedback(null);
       setResult(null);
       setEnsembleResult(null);
       const directionNote = parsed.arrow === 'reversible'
@@ -112,6 +118,28 @@ export const ResearchLab: React.FC = () => {
         valid: false,
         message: cause instanceof Error ? cause.message : 'Could not parse equation.',
       });
+    }
+  };
+
+  const convertRateConstant = () => {
+    setConversionFeedback(null);
+    try {
+      if (network.reactions.length !== 1) {
+        throw new Error('The current converter requires exactly one reaction channel.');
+      }
+      const converted = convertMacroscopicRateConstant(
+        network.reactions[0],
+        Number(macroscopicRate),
+        Number(volumeLiters),
+      );
+      setRate(String(converted.stochasticRateConstant));
+      setResult(null);
+      setEnsembleResult(null);
+      setConversionFeedback(
+        `Converted ${converted.macroscopicUnits} to c = ${converted.stochasticRateConstant.toExponential(6)} ${converted.stochasticUnits}. ${converted.formula}`,
+      );
+    } catch (cause) {
+      setConversionFeedback(cause instanceof Error ? cause.message : 'Rate conversion failed.');
     }
   };
 
@@ -255,6 +283,25 @@ export const ResearchLab: React.FC = () => {
               <input type="number" min="0" step="0.01" value={rate} onChange={e => setRate(e.target.value)}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
+            <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
+              <p className="text-xs font-semibold text-zinc-300">Macroscopic kinetic constant converter</p>
+              <p className="mt-1 text-[11px] leading-5 text-zinc-500">Convert k from concentration-based mass-action units to the SSA stochastic constant using reaction order and volume.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-[11px] text-zinc-400">Macroscopic k ({activeNetwork.reactions[0]?.reactants.reduce((sum, term) => sum + term.coefficient, 0) === 1 ? 's⁻¹' : `M⁻${Math.max(1, (activeNetwork.reactions[0]?.reactants.reduce((sum, term) => sum + term.coefficient, 0) ?? 1) - 1)} s⁻¹`})</span>
+                  <input type="number" min="0" step="any" value={macroscopicRate} onChange={e => setMacroscopicRate(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs outline-none focus:border-cyan-500" />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] text-zinc-400">Volume (litres)</span>
+                  <input type="number" min="0" step="any" value={volumeLiters} onChange={e => setVolumeLiters(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs outline-none focus:border-cyan-500" />
+                </label>
+              </div>
+              <button onClick={convertRateConstant} className="mt-3 w-full rounded-lg border border-cyan-800 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-900/50">Convert and apply stochastic c</button>
+              {conversionFeedback && <p role="status" className="mt-2 break-words text-[11px] leading-5 text-cyan-200">{conversionFeedback}</p>}
+              <p className="mt-2 text-[10px] leading-4 text-zinc-600">Assumes an elementary mass-action step, ideal well-mixed solution, constant volume and the standard large-population rate-law convention. Finite-population stochastic trajectories may differ from deterministic concentration equations.</p>
+            </div>
             <label className="block">
               <span className="text-xs text-zinc-400">Ensemble replicates (2–1,000)</span>
               <input type="number" min="2" max="1000" step="1" value={replicates} onChange={e => setReplicates(e.target.value)}

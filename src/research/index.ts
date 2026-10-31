@@ -5,3 +5,4 @@ export * from './elements';
 export * from './formula';
 export * from './provenance';
 export * from './ensemble';
+export * from './rateConversion';
