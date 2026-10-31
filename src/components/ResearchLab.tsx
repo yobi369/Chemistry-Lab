@@ -308,7 +308,7 @@ export const ResearchLab: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-base font-semibold">Chemical equation parser & balance checker</h3>
-            <p className="mt-1 text-xs text-zinc-500">Enter a neutral formula equation. Nested groups and hydrate notation are expanded before atom and formal-charge checks.</p>
+            <p className="mt-1 text-xs text-zinc-500">Enter one neutral or ionic equation per line. Nested groups, hydrate notation and explicit ionic charges are expanded before atom and charge checks.</p>
           </div>
           <span className="font-mono text-[10px] text-cyan-300">FORMULA VALIDATION</span>
         </div>
@@ -326,7 +326,7 @@ export const ResearchLab: React.FC = () => {
             {equationFeedback.valid ? '✓ ' : 'Check required: '}{equationFeedback.message}
           </p>
         )}
-        <p className="mt-2 text-[11px] leading-5 text-zinc-600">Supported: element symbols, integer coefficients, nested () and [] groups, hydrate separators (· or .), and forward/reversible arrows. Ionic charge notation and phase labels are not yet parsed; formulas are treated as neutral formula units.</p>
+        <p className="mt-2 text-[11px] leading-5 text-zinc-600">Supported: element symbols, integer coefficients, nested () and [] groups, hydrate separators (· or .), and forward/reversible arrows. Ionic charges use caret notation (Fe^3+, SO4^2-, H^+, e^-). Phase labels, isotope notation and structural isomers are not yet modelled.</p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
