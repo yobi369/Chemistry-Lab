@@ -154,3 +154,8 @@ Multi-step networks now have an independent stochastic rate constant for every r
 ## Ionic species and redox equations
 
 Equation input supports explicit caret charge suffixes such as `Fe^3+`, `SO4^2-`, `H^+` and the electron species `e^-`. Charge is stored separately from elemental composition and checked alongside atom conservation. The electron is the only supported atom-free species and carries charge −1. Phase labels, isotope notation, coordination-state inference and structural-isomer identity remain unsupported; specify the relevant species and charges explicitly.
+
+
+## Exact equation balancing
+
+The Research Lab includes an exact rational row-reduction balancer for neutral and explicitly charged equations. It solves the homogeneous elemental/charge conservation system and returns positive integer stoichiometric coefficients, including electron bookkeeping for redox equations. For underdetermined equations, it searches a bounded set of free-variable assignments and selects the smallest coefficient sum found. It may ask the user to simplify highly underdetermined networks; always inspect the balanced equation and confirm the chemical species before loading it.
