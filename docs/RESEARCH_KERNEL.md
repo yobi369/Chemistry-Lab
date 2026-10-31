@@ -107,3 +107,6 @@ The v2 import path validates the saved network and initial populations, requires
 ## Stoichiometric matrix and conservation laws
 
 For species \(i\) and reaction channel \(j\), the stoichiometric matrix is \(N_{ij}=\nu^{products}_{ij}-\nu^{reactants}_{ij}\). The implementation computes exact rank and the left nullspace of \(N\) using rational row reduction. Each left-nullspace vector \(l\) satisfies \(l^T N=0\) and therefore defines a linear invariant of the closed reaction network's species-count state. The right nullity reports the dimension of the reaction-channel cycle space. These are mathematical properties of the entered network, not proof that the network includes every species or exchange process in the real system.
+
+
+The v2 import validator also recomputes macroscopic-to-stochastic conversions and Arrhenius-derived macroscopic constants from their recorded inputs. It verifies that the resulting stochastic constant matches the saved reaction channel within a tight floating-point tolerance. This is an internal consistency check, not independent verification of the source experiment or reported physical units.
