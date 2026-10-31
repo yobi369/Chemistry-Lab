@@ -62,9 +62,9 @@ test('experiment provenance exports', async (t) => {
   });
 
   await t.test('validates the Arrhenius-to-stochastic parameter pathway', () => {
-    const A = 10;
     const Ea = 1000;
     const T = 300;
+    const A = Math.exp(Ea / (8.31446261815324 * T));
     const k = A * Math.exp(-Ea / (8.31446261815324 * T));
     const arrheniusRecord = createExperimentRecord(model, initialCounts, options, result, '2026-01-01T00:00:00.000Z', [{
       reactionId: 'r1',
