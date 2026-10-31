@@ -48,3 +48,61 @@ test('rejects an explicit step outside the positivity stability bound', () => {
     reactions: [],
   }), SimulationInputError);
 });
+
+test('periodic upwind advection transports a pulse and conserves total concentration', () => {
+  const result=simulateReactionDiffusion1D({
+    lengthMeters:1,timeStepSeconds:0.125,steps:1,boundaryCondition:'periodic',reactions:[],
+    species:[{id:'A',diffusionCoefficientM2PerS:0,advectionVelocityMetersPerSecond:1,
+      initialConcentrationMolPerM3:[1,0,0,0]}],
+  });
+  const final=result.concentrationsMolPerM3.A;
+  assert.ok(Math.abs(final[0]-0.5)<1e-12);
+  assert.ok(Math.abs(final[1]-0.5)<1e-12);
+  assert.ok(Math.abs(final.reduce((a,b)=>a+b,0)-1)<1e-12);
+});
+
+test('periodic transport wraps material across the domain boundary', () => {
+  const result=simulateReactionDiffusion1D({
+    lengthMeters:1,timeStepSeconds:0.125,steps:1,boundaryCondition:'periodic',reactions:[],
+    species:[{id:'A',diffusionCoefficientM2PerS:0,advectionVelocityMetersPerSecond:1,
+      initialConcentrationMolPerM3:[0,0,0,1]}],
+  });
+  const final=result.concentrationsMolPerM3.A;
+  assert.ok(Math.abs(final[0]-0.5)<1e-12);
+  assert.ok(Math.abs(final[3]-0.5)<1e-12);
+  assert.ok(Math.abs(final.reduce((a,b)=>a+b,0)-1)<1e-12);
+});
+
+test('manufactured cosine diffusion solution demonstrates second-order mesh convergence', () => {
+  const errors:number[]=[];
+  const length=1,diffusion=1,finalTime=0.02;
+  for(const cells of [20,40,80]){
+    const dx=length/cells;
+    const nominalDt=0.2*dx*dx/diffusion;
+    const steps=Math.round(finalTime/nominalDt);
+    const dt=finalTime/steps;
+    const initial=Array.from({length:cells},(_,i)=>{
+      const x=(i+0.5)*dx;
+      return 1+0.2*Math.cos(Math.PI*x/length);
+    });
+    const result=simulateReactionDiffusion1D({
+      lengthMeters:length,timeStepSeconds:dt,steps,reactions:[],
+      species:[{id:'A',diffusionCoefficientM2PerS:diffusion,initialConcentrationMolPerM3:initial}],
+    });
+    const exact=initial.map((_,i)=>{
+      const x=(i+0.5)*dx;
+      return 1+0.2*Math.cos(Math.PI*x/length)*Math.exp(-diffusion*(Math.PI/length)**2*finalTime);
+    });
+    errors.push(Math.max(...result.concentrationsMolPerM3.A.map((value,i)=>Math.abs(value-exact[i]))));
+  }
+  assert.ok(errors[0]/errors[1]>3.5);
+  assert.ok(errors[1]/errors[2]>3.5);
+});
+
+test('combined diffusion, advection and reaction stability restriction is enforced', () => {
+  assert.throws(()=>simulateReactionDiffusion1D({
+    lengthMeters:1,timeStepSeconds:1,steps:1,boundaryCondition:'periodic',reactions:[],
+    species:[{id:'A',diffusionCoefficientM2PerS:0.1,advectionVelocityMetersPerSecond:1,
+      initialConcentrationMolPerM3:[1,0,0,0]}],
+  }),/combined diffusion\/advection\/reaction stability number/);
+});
