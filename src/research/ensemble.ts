@@ -54,6 +54,9 @@ export function simulateEnsemble(
       seed,
       maxEvents: options.maxEvents,
     });
+    if (trajectory.terminatedBy === 'cancelled') {
+      throw new SimulationInputError(`Ensemble cancelled during replicate ${replicate + 1}.`);
+    }
     if (trajectory.terminatedBy === 'event_limit') {
       throw new SimulationInputError(`Replicate ${replicate + 1} reached the event limit; increase the limit or shorten the simulation horizon before interpreting the ensemble.`);
     }
