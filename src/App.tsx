@@ -16,6 +16,7 @@ import { ExportShareModal } from './components/ExportShareModal';
 import { ThreeSpatialChamber } from './components/ThreeSpatialChamber';
 import { LabChallenges } from './components/LabChallenges';
 import { AiSynthesisCompiler } from './components/AiSynthesisCompiler';
+import { ResearchLab } from './components/ResearchLab';
 import { OnboardingTour } from './components/OnboardingTour';
 import { decodeModelFromUrl } from './utils/urlState';
 import { QualityTier, QUALITY_PRESETS } from './utils/performanceConfig';
@@ -332,6 +333,8 @@ export default function App() {
                 reactionRules={reactionRules}
               />
             )}
+
+            {activeTab === 'research' && <ResearchLab />}
 
             {activeTab === 'analytics' && (
               <AnalyticsCharts
