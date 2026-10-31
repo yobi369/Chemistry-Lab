@@ -16,3 +16,4 @@ export * from './molecularIdentity';
 export * from './reactionThermodynamics';
 export * from './rdkitToolkit';
 export * from './detailedBalance';
+export * from './nonlinearKineticFitting';
