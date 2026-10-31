@@ -23,6 +23,7 @@ import {
   Wand2,
   HelpCircle,
   Zap,
+  Activity,
   Menu,
   X
 } from 'lucide-react';
@@ -42,7 +43,8 @@ export type ActiveTab =
   | 'analytics'
   | 'syscalls'
   | 'rules'
-  | 'guide';
+  | 'guide'
+  | 'research';
 
 interface NavbarProps {
   activeTab: ActiveTab;
@@ -110,6 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'genetic', label: 'Genetic Soup', icon: <Dna className="w-3.5 h-3.5" />, color: 'emerald' },
     { id: 'network', label: 'Rewrite Graph', icon: <GitFork className="w-3.5 h-3.5" />, color: 'emerald' },
     { id: 'analytics', label: 'Kinetics & Phase', icon: <LineChart className="w-3.5 h-3.5" />, color: 'emerald' },
+    { id: 'research', label: 'Research Lab · SSA', icon: <Activity className="w-3.5 h-3.5" />, color: 'cyan' },
     { id: 'syscalls', label: 'Syscall VM', icon: <Terminal className="w-3.5 h-3.5" />, color: 'emerald' },
     { id: 'rules', label: 'Rules Matrix', icon: <Sliders className="w-3.5 h-3.5" />, color: 'emerald' },
     { id: 'guide', label: 'Fringe Theory', icon: <BookOpen className="w-3.5 h-3.5" />, color: 'emerald' },
