@@ -41,6 +41,14 @@ test('research chemistry kernel', async (t) => {
     assert.ok(validateNetwork(invalid).some((issue) => issue.code === 'ATOM_IMBALANCE'));
   });
 
+  await t.test('rejects invalid periodic-table symbols', () => {
+    const invalid: ReactionNetwork = {
+      species: [{ id: 'Xx', label: 'unknown', composition: { Xx: 1 }, charge: 0 }],
+      reactions: [],
+    };
+    assert.ok(validateNetwork(invalid).some((issue) => issue.code === 'INVALID_COMPOSITION'));
+  });
+
   await t.test('is reproducible for a fixed seed', () => {
     const options = { durationSeconds: 2, seed: 42 };
     assert.deepEqual(simulateGillespie(network, { A: 25, B: 0 }, options), simulateGillespie(network, { A: 25, B: 0 }, options));
@@ -51,6 +59,14 @@ test('research chemistry kernel', async (t) => {
     assert.equal(result.finalCounts.A + result.finalCounts.B, 25);
     assert.ok(result.finalCounts.A >= 0);
     assert.ok(result.finalCounts.B >= 0);
+  });
+
+  await t.test('supports cooperative cancellation', () => {
+    const result = simulateGillespie(network, { A: 25, B: 0 }, {
+      durationSeconds: 100, shouldCancel: () => true,
+    });
+    assert.equal(result.terminatedBy, 'cancelled');
+    assert.equal(result.events.length, 0);
   });
 
   await t.test('does not fire a reaction without enough reactants', () => {
