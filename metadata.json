@@ -1,0 +1,6 @@
+{
+  "name": "Artificial Chemistry Engine",
+  "description": "Simulate digital molecules, reaction rewrite rules, energy dynamics, emergent catalytic hypercycles, and computational system call chemistry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
