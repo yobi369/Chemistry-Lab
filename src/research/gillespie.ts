@@ -67,7 +67,11 @@ export function simulateGillespie(
     throw new SimulationInputError('durationSeconds must be finite and non-negative.');
   }
 
-  const seed = (options.seed ?? 1) >>> 0;
+  const requestedSeed = options.seed ?? 1;
+  if (!Number.isSafeInteger(requestedSeed) || requestedSeed < 0 || requestedSeed > 4_294_967_295) {
+    throw new SimulationInputError('seed must be an integer between 0 and 4,294,967,295.');
+  }
+  const seed = requestedSeed >>> 0;
   const maxEvents = options.maxEvents ?? 100_000;
   if (!Number.isSafeInteger(maxEvents) || maxEvents < 1) {
     throw new SimulationInputError('maxEvents must be a positive safe integer.');
@@ -101,13 +105,17 @@ export function simulateGillespie(
     }
     if (!(totalPropensity > 0)) {
       terminatedBy = 'no_enabled_reactions';
+      time = options.durationSeconds;
       break;
     }
 
     // Avoid log(0), including the rare case where a PRNG returns exactly zero.
     const uTime = Math.max(Number.EPSILON, 1 - random());
     const tau = -Math.log(uTime) / totalPropensity;
-    if (time + tau > options.durationSeconds) break;
+    if (time + tau > options.durationSeconds) {
+      time = options.durationSeconds;
+      break;
+    }
 
     const threshold = random() * totalPropensity;
     let cumulative = 0;

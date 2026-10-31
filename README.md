@@ -107,3 +107,7 @@ Contributions should include:
 ## License
 
 No license has yet been selected. Until a license is added, normal copyright restrictions apply; do not assume the project is open-source licensed for reuse.
+
+## Stochastic Research Lab
+
+The application now includes a dedicated **Research Lab · SSA** workspace. It exposes a reproducible event-driven simulation with editable initial population, time horizon, stochastic rate constant and random seed. The built-in hydrogen dissociation network is an illustrative software-verification example; its rate parameter is not an experimentally calibrated value. See [the research-kernel model specification](docs/RESEARCH_KERNEL.md) before interpreting results.

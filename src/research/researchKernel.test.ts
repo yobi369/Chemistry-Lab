@@ -61,6 +61,20 @@ test('research chemistry kernel', async (t) => {
     assert.ok(result.finalCounts.B >= 0);
   });
 
+  await t.test('rejects non-integer seeds', () => {
+    assert.throws(() => simulateGillespie(network, { A: 25, B: 0 }, {
+      durationSeconds: 1, seed: 1.5,
+    }), /seed must be an integer/);
+  });
+
+  await t.test('reports the full observation horizon when no event occurs before it', () => {
+    const result = simulateGillespie(network, { A: 1, B: 0 }, {
+      durationSeconds: 0.000001, seed: 2,
+    });
+    assert.equal(result.elapsedSeconds, 0.000001);
+    assert.equal(result.terminatedBy, 'time_limit');
+  });
+
   await t.test('supports cooperative cancellation', () => {
     const result = simulateGillespie(network, { A: 25, B: 0 }, {
       durationSeconds: 100, shouldCancel: () => true,
@@ -73,5 +87,6 @@ test('research chemistry kernel', async (t) => {
     const result = simulateGillespie(network, { A: 0, B: 0 }, { durationSeconds: 10 });
     assert.equal(result.events.length, 0);
     assert.equal(result.terminatedBy, 'no_enabled_reactions');
+    assert.equal(result.elapsedSeconds, 10);
   });
 });
