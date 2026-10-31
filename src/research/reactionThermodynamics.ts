@@ -1,6 +1,7 @@
 import type { ReactionNetwork, StochasticReaction } from './types';
 import { SimulationInputError } from './gillespie';
 import { GAS_CONSTANT_J_PER_MOL_K } from './arrhenius';
+import { validateNetwork } from './validateNetwork';
 
 export interface ReactionThermodynamicAnalysis {
   readonly reactionId: string;
@@ -38,6 +39,8 @@ export function analyzeReactionThermodynamics(args: {
   if (!Number.isFinite(temperatureKelvin) || temperatureKelvin <= 0) {
     throw new SimulationInputError('Temperature must be finite and greater than zero kelvin.');
   }
+  const networkIssues = validateNetwork(network);
+  if (networkIssues.length) throw new SimulationInputError(`Reaction network is invalid: ${networkIssues.map(issue => issue.message).join(' ')}`);
   const reaction = network.reactions.find(item => item.id === reactionId);
   if (!reaction) throw new SimulationInputError(`Unknown reaction id "${reactionId}".`);
   const speciesIds = new Set(network.species.map(item => item.id));
