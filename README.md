@@ -116,3 +116,8 @@ The application now includes a dedicated **Research Lab · SSA** workspace. It e
 ## Formula and equation validation
 
 The research kernel parses neutral molecular/formula-unit strings, including nested parentheses/square brackets and hydrate notation, and converts typed equations into reaction networks for atom/charge balance checks. Ionic charge notation and phase labels are not inferred; formula strings are treated as neutral formula units. Reversible arrows are preserved as metadata, while the current SSA network builder represents the written forward direction only.
+
+
+## Experiment provenance and export
+
+Completed research-kernel runs can be exported as a versioned JSON reproducibility record containing the exact reaction network, initial populations, stochastic-rate-constant convention, duration, seed, assumptions and full event trajectory. A companion CSV export contains event times, reaction identifiers and per-species populations after each event. Keep the JSON record with any downstream plots or reported conclusions.
