@@ -46,8 +46,16 @@ test('multi-step nonlinear mass-action kinetic fitting', async t => {
     assert.ok(fit.warnings.some(w=>w.includes('not identifiable')));
   });
   await t.test('rejects missing parameter bounds, unknown species and incomplete uncertainty', () => {
-    assert.throws(()=>fitMassActionMechanism(sequential,[parameters[0]],[],{}),/one kinetic parameter/);
-    assert.throws(()=>fitMassActionMechanism(sequential,parameters,[{timeSeconds:1,speciesId:'X',value:1}]),/More observations/);
+    assert.throws(()=>fitMassActionMechanism(sequential,[parameters[0]],[
+      {timeSeconds:0,speciesId:'A',value:1},
+      {timeSeconds:1,speciesId:'A',value:0.5},
+      {timeSeconds:2,speciesId:'A',value:0.2},
+    ],{}),/one unique kinetic parameter/);
+    assert.throws(()=>fitMassActionMechanism(sequential,parameters,[
+      {timeSeconds:0,speciesId:'X',value:1},
+      {timeSeconds:1,speciesId:'X',value:0.5},
+      {timeSeconds:2,speciesId:'X',value:0.2},
+    ]),/invalid species/);
     assert.throws(()=>fitMassActionMechanism(sequential,parameters,[
       {timeSeconds:0,speciesId:'A',value:1,standardDeviation:0.1},
       {timeSeconds:1,speciesId:'A',value:0.5},
