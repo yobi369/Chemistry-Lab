@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import {
-  equationToNetwork,
-  parseReactionEquation,
+  parseReactionNetwork,
   simulateEnsemble,
   simulateGillespie,
   convertMacroscopicRateConstant,
   validateNetwork,
+  validateInitialCounts,
   createExperimentRecord,
   serializeExperiment,
   simulationEventsToCsv,
@@ -29,16 +29,23 @@ const DISSOCIATION_NETWORK: ReactionNetwork = {
 const format = (value: number, digits = 4) =>
   Number(value.toFixed(digits)).toLocaleString(undefined, { maximumFractionDigits: digits });
 
-function createInitialCounts(network: ReactionNetwork, populationPerCoefficient: number): SpeciesCounts {
-  const counts: Record<string, number> = Object.fromEntries(
-    network.species.map((species) => [species.id, 0]),
+function createDefaultInitialCounts(network: ReactionNetwork): Record<string, string> {
+  const counts: Record<string, string> = Object.fromEntries(
+    network.species.map((species) => [species.id, '0']),
   );
-  for (const reaction of network.reactions) {
-    for (const term of reaction.reactants) {
-      counts[term.speciesId] += term.coefficient * populationPerCoefficient;
-    }
+  // The first reaction's reactants provide a sensible starting condition.
+  // Every species remains individually editable in the experiment panel.
+  for (const term of network.reactions[0]?.reactants ?? []) {
+    counts[term.speciesId] = String(term.coefficient * 80);
   }
   return counts;
+}
+
+function parseInitialCounts(network: ReactionNetwork, values: Record<string, string>): SpeciesCounts {
+  return Object.fromEntries(network.species.map((species) => [
+    species.id,
+    values[species.id] === '' ? Number.NaN : Number(values[species.id] ?? '0'),
+  ]));
 }
 
 function downloadTextFile(filename: string, content: string, mimeType: string): void {
@@ -56,7 +63,7 @@ function downloadTextFile(filename: string, content: string, mimeType: string): 
 export const ResearchLab: React.FC = () => {
   const [activeNetwork, setActiveNetwork] = useState<ReactionNetwork>(DISSOCIATION_NETWORK);
   const [activeEquation, setActiveEquation] = useState('H₂ → 2 H');
-  const [populationPerCoefficient, setPopulationPerCoefficient] = useState('80');
+  const [initialPopulationValues, setInitialPopulationValues] = useState<Record<string, string>>(() => createDefaultInitialCounts(DISSOCIATION_NETWORK));
   const [duration, setDuration] = useState('10');
   const [rate, setRate] = useState('0.08');
   const [macroscopicRate, setMacroscopicRate] = useState('1');
@@ -79,10 +86,13 @@ export const ResearchLab: React.FC = () => {
   }), [activeNetwork, rate]);
 
   const validationIssues = useMemo(() => validateNetwork(network), [network]);
-  const population = Number(populationPerCoefficient);
   const initialCounts = useMemo(
-    () => createInitialCounts(network, Number.isSafeInteger(population) && population >= 0 ? population : 0),
-    [network, population],
+    () => parseInitialCounts(network, initialPopulationValues),
+    [network, initialPopulationValues],
+  );
+  const initialCountIssues = useMemo(
+    () => validateInitialCounts(network, initialCounts),
+    [network, initialCounts],
   );
   const maxCount = result
     ? Math.max(1, ...(Object.values(result.initialCounts) as number[]), ...(Object.values(result.finalCounts) as number[]))
@@ -92,8 +102,8 @@ export const ResearchLab: React.FC = () => {
     setEquationFeedback(null);
     setError(null);
     try {
-      const parsed = parseReactionEquation(equationInput);
-      const candidate = equationToNetwork(parsed, Number(rate));
+      const parsed = parseReactionNetwork(equationInput, Number(rate));
+      const candidate = parsed.network;
       const issues = validateNetwork(candidate);
       if (issues.length) {
         setEquationFeedback({ valid: false, message: issues.map((issue) => issue.message).join(' ') });
@@ -101,17 +111,19 @@ export const ResearchLab: React.FC = () => {
       }
 
       setActiveNetwork(candidate);
-      setActiveEquation(parsed.source);
+      setActiveEquation(parsed.equations.map((equation) => equation.source).join('\\n'));
+      setInitialPopulationValues(createDefaultInitialCounts(candidate));
       setRate('0.08');
       setConversionFeedback(null);
       setResult(null);
       setEnsembleResult(null);
-      const directionNote = parsed.arrow === 'reversible'
-        ? ' The reversible arrow is retained as metadata; this simulator currently runs only the written forward direction.'
+      const reversibleCount = parsed.equations.filter((equation) => equation.arrow === 'reversible').length;
+      const directionNote = reversibleCount > 0
+        ? ` ${reversibleCount} reversible arrow(s) were recognized, but the SSA currently models only the written forward direction; no reverse rates are inferred.`
         : '';
       setEquationFeedback({
         valid: true,
-        message: `Balanced neutral equation loaded. Initial populations will be assigned to reactants using the experiment input below.${directionNote}`,
+        message: `Loaded ${candidate.reactions.length} balanced reaction channel(s). The same stochastic c is assigned to every channel; edit initial populations species by species below.${directionNote}`,
       });
     } catch (cause) {
       setEquationFeedback({
@@ -147,8 +159,8 @@ export const ResearchLab: React.FC = () => {
     setError(null);
     setEnsembleResult(null);
     try {
-      if (!Number.isSafeInteger(population) || population < 0) {
-        throw new Error('Initial population per reactant coefficient must be a non-negative integer.');
+      if (initialCountIssues.length) {
+        throw new Error(initialCountIssues.map((issue) => issue.message).join(' '));
       }
       const seconds = Number(duration);
       const randomSeed = Number(seed);
@@ -181,8 +193,8 @@ export const ResearchLab: React.FC = () => {
     setResult(null);
     setEnsembleResult(null);
     try {
-      if (!Number.isSafeInteger(population) || population < 0) {
-        throw new Error('Initial population per reactant coefficient must be a non-negative integer.');
+      if (initialCountIssues.length) {
+        throw new Error(initialCountIssues.map((issue) => issue.message).join(' '));
       }
       const seconds = Number(duration);
       const randomSeed = Number(seed);
@@ -246,11 +258,14 @@ export const ResearchLab: React.FC = () => {
           </div>
           <span className="font-mono text-[10px] text-cyan-300">FORMULA VALIDATION</span>
         </div>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <input value={equationInput} onChange={e => { setEquationInput(e.target.value); setEquationFeedback(null); }}
-            aria-label="Chemical reaction equation" placeholder="2 H2 + O2 -> 2 H2O"
-            className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-cyan-500" />
-          <button onClick={validateAndLoadEquation} className="rounded-lg border border-cyan-700 bg-cyan-950/60 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-900/70">Validate & load network</button>
+        <div className="mt-3 flex flex-col gap-2">
+          <textarea value={equationInput} onChange={e => { setEquationInput(e.target.value); setEquationFeedback(null); }}
+            aria-label="Chemical reaction network equations" rows={4} placeholder={'2 H2 + O2 -> 2 H2O\\n2 H2O -> 2 H2 + O2'}
+            className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-cyan-500" />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] text-zinc-600">One reaction per line. Blank lines and # comments are ignored.</span>
+            <button onClick={validateAndLoadEquation} className="rounded-lg border border-cyan-700 bg-cyan-950/60 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-900/70">Validate & load network</button>
+          </div>
         </div>
         {equationFeedback && (
           <p role="status" className={`mt-3 rounded-lg border p-3 text-xs leading-5 ${equationFeedback.valid ? 'border-emerald-900 bg-emerald-950/30 text-emerald-200' : 'border-rose-900 bg-rose-950/30 text-rose-200'}`}>
@@ -267,20 +282,29 @@ export const ResearchLab: React.FC = () => {
             <span className="font-mono text-[10px] text-emerald-300">MODEL INPUT</span>
           </div>
           <div className="mt-4 space-y-4">
-            <label className="block">
-              <span className="text-xs text-zinc-400">Initial population per reactant coefficient</span>
-              <input type="number" min="0" step="1" value={populationPerCoefficient} onChange={e => setPopulationPerCoefficient(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
-              <span className="mt-1 block text-[11px] text-zinc-600">Each reactant starts with this number multiplied by its stoichiometric coefficient. Product-only species start at zero.</span>
-            </label>
+            <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
+              <p className="text-xs font-semibold text-zinc-300">Initial species populations</p>
+              <p className="mt-1 text-[11px] text-zinc-500">Set each species count explicitly. The first reaction's reactants are prefilled as a starting point; review them before running.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {network.species.map(species => (
+                  <label key={species.id} className="block min-w-0">
+                    <span className="block truncate text-[11px] text-zinc-400">{species.label}</span>
+                    <input type="number" min="0" step="1" value={initialPopulationValues[species.id] ?? '0'}
+                      onChange={e => { setInitialPopulationValues(current => ({ ...current, [species.id]: e.target.value })); setResult(null); setEnsembleResult(null); }}
+                      className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs outline-none focus:border-cyan-500" />
+                  </label>
+                ))}
+              </div>
+              {initialCountIssues.length > 0 && <p className="mt-2 text-[11px] text-rose-300">{initialCountIssues.map(issue => issue.message).join(' ')}</p>}
+            </div>
             <label className="block">
               <span className="text-xs text-zinc-400">Simulation horizon (seconds)</span>
-              <input type="number" min="0.001" step="0.1" value={duration} onChange={e => setDuration(e.target.value)}
+              <input type="number" min="0.001" step="0.1" value={duration} onChange={e => { setDuration(e.target.value); setResult(null); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
             <label className="block">
               <span className="text-xs text-zinc-400">Stochastic rate constant c (s⁻¹ per available reactant combination)</span>
-              <input type="number" min="0" step="0.01" value={rate} onChange={e => setRate(e.target.value)}
+              <input type="number" min="0" step="0.01" value={rate} onChange={e => { setRate(e.target.value); setResult(null); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
             <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
@@ -298,21 +322,21 @@ export const ResearchLab: React.FC = () => {
                     className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs outline-none focus:border-cyan-500" />
                 </label>
               </div>
-              <button onClick={convertRateConstant} className="mt-3 w-full rounded-lg border border-cyan-800 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-900/50">Convert and apply stochastic c</button>
+              <button onClick={convertRateConstant} disabled={network.reactions.length !== 1} className="mt-3 w-full rounded-lg border border-cyan-800 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-900/50 disabled:cursor-not-allowed disabled:opacity-40">{network.reactions.length === 1 ? 'Convert and apply stochastic c' : 'Rate conversion requires one reaction channel'}</button>
               {conversionFeedback && <p role="status" className="mt-2 break-words text-[11px] leading-5 text-cyan-200">{conversionFeedback}</p>}
               <p className="mt-2 text-[10px] leading-4 text-zinc-600">Assumes an elementary mass-action step, ideal well-mixed solution, constant volume and the standard large-population rate-law convention. Finite-population stochastic trajectories may differ from deterministic concentration equations.</p>
             </div>
             <label className="block">
               <span className="text-xs text-zinc-400">Ensemble replicates (2–1,000)</span>
-              <input type="number" min="2" max="1000" step="1" value={replicates} onChange={e => setReplicates(e.target.value)}
+              <input type="number" min="2" max="1000" step="1" value={replicates} onChange={e => { setReplicates(e.target.value); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
             <label className="block">
               <span className="text-xs text-zinc-400">Random seed (uint32)</span>
-              <input type="number" min="0" max="4294967295" step="1" value={seed} onChange={e => setSeed(e.target.value)}
+              <input type="number" min="0" max="4294967295" step="1" value={seed} onChange={e => { setSeed(e.target.value); setResult(null); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-cyan-500" />
             </label>
-            <button onClick={run} disabled={validationIssues.length > 0}
+            <button onClick={run} disabled={validationIssues.length > 0 || initialCountIssues.length > 0}
               className="w-full rounded-lg bg-cyan-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-40">
               Run stochastic experiment
             </button>
@@ -324,8 +348,8 @@ export const ResearchLab: React.FC = () => {
           </div>
           <div className="mt-5 border-t border-zinc-800 pt-4">
             <p className="text-xs font-semibold text-zinc-300">Active reaction network</p>
-            <div className="mt-2 break-words rounded-lg bg-black/30 p-3 font-mono text-sm text-cyan-200">{activeEquation}</div>
-            <p className="mt-2 text-xs leading-5 text-zinc-500">Network balance is validated before a run. Initial populations are derived from the reactant coefficients and the population input.</p>
+            <div className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-black/30 p-3 font-mono text-sm text-cyan-200">{activeEquation}</div>
+            <p className="mt-2 text-xs leading-5 text-zinc-500">Each channel is balanced independently. Every species population is an explicit model input; the first channel's reactants are only prefilled defaults.</p>
             {validationIssues.length > 0 && (
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-rose-300">
                 {validationIssues.map((issue, index) => <li key={index}>{issue.message}</li>)}

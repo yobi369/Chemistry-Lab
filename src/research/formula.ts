@@ -193,3 +193,58 @@ export function equationToNetwork(
     }],
   };
 }
+
+export interface ParsedReactionNetwork {
+  readonly equations: readonly ParsedChemicalEquation[];
+  readonly network: ReactionNetwork;
+}
+
+/**
+ * Parse one neutral reaction equation per line. Blank lines and lines whose
+ * first non-whitespace character is # are ignored. Each channel receives the
+ * same supplied stochastic rate constant; per-channel rate editing is a
+ * separate modelling step.
+ */
+export function parseReactionNetwork(
+  input: string,
+  stochasticRateConstant: number,
+): ParsedReactionNetwork {
+  const lines = input
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#'));
+  if (lines.length === 0) throw new ChemicalParseError('Enter at least one reaction equation.');
+
+  const equations = lines.map(parseReactionEquation);
+  const compositions = new Map<string, Readonly<Record<string, number>>>();
+  const reactions = equations.map((equation, index) => {
+    for (const [speciesId, composition] of Object.entries(equation.compositions)) {
+      const previous = compositions.get(speciesId);
+      if (previous && JSON.stringify(previous) !== JSON.stringify(composition)) {
+        throw new ChemicalParseError(`Formula "${speciesId}" resolved to inconsistent elemental compositions.`);
+      }
+      compositions.set(speciesId, composition);
+    }
+    const toTerms = (terms: readonly ParsedEquationTerm[]): StoichiometricTerm[] =>
+      terms.map(({ speciesId, coefficient }) => ({ speciesId, coefficient }));
+    return {
+      id: `reaction-${index + 1}`,
+      label: equation.source,
+      reactants: toTerms(equation.reactants),
+      products: toTerms(equation.products),
+      stochasticRateConstant,
+    };
+  });
+
+  const species = [...compositions].map(([id, composition]) => ({
+    id,
+    label: id.slice('formula:'.length),
+    composition,
+    charge: 0,
+  }));
+
+  return {
+    equations,
+    network: { species, reactions },
+  };
+}

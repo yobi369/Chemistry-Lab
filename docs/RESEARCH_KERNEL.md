@@ -67,3 +67,8 @@ and a constant-volume ideal solution. Under the kernel propensity convention \(a
 \[c = k(N_A V)^{1-m}\prod_i \nu_i!\]
 
 where \(m=\sum_i\nu_i\), \(V\) is in litres, and \(k\) uses \(M^{1-m}s^{-1}\) (or \(s^{-1}\) for first order). This convention corresponds to the macroscopic mass-action law in the large-population limit. It does not remove the need to confirm the reaction order, rate-law convention, volume, solvent/solution assumptions and experimental conditions. It is not suitable for a complex mechanism whose observed rate law differs from the written stoichiometric molecularity.
+
+
+## Multi-channel networks
+
+A network text input may contain multiple neutral reaction equations, one per line. Each equation is validated independently and species with the same formula identifier are shared between channels. This parser treats formula units as neutral and cannot distinguish structural isomers with identical elemental formulae; a future structure-aware species identifier is required for that. The current UI applies one shared stochastic constant to every parsed channel, which is a convenience for exploratory models, not a scientifically general parameterisation. Researchers should not use a shared value unless justified by their model. Reversible arrow syntax is retained in parse metadata but the network converter emits only the written forward channel until a separate reverse rate is specified.
