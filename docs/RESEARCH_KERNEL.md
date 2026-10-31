@@ -54,3 +54,16 @@ The simulator uses a seeded Mulberry32 pseudo-random generator. For identical va
 The current unit tests check basic network balance, rejection of an atom-imbalanced reaction, seed reproducibility, non-negative populations and conservation of entity count in a one-to-one isomerisation. These tests establish software behaviour for those cases only. They do not validate the algorithm against a published benchmark suite or establish scientific accuracy for arbitrary systems.
 
 Future acceptance should include analytical birth/death processes, first-order decay waiting-time distributions, competing reaction channels, multi-reactant combinatorics, ensemble confidence intervals and comparisons with trusted reference implementations.
+
+
+## Macroscopic kinetic constant conversion
+
+The optional conversion helper assumes the macroscopic rate law
+
+\[r = k\prod_i [S_i]^{\nu_i}\]
+
+and a constant-volume ideal solution. Under the kernel propensity convention \(a=c\prod_i {n_i\choose\nu_i}\), the conventional mesoscopic conversion is
+
+\[c = k(N_A V)^{1-m}\prod_i \nu_i!\]
+
+where \(m=\sum_i\nu_i\), \(V\) is in litres, and \(k\) uses \(M^{1-m}s^{-1}\) (or \(s^{-1}\) for first order). This convention corresponds to the macroscopic mass-action law in the large-population limit. It does not remove the need to confirm the reaction order, rate-law convention, volume, solvent/solution assumptions and experimental conditions. It is not suitable for a complex mechanism whose observed rate law differs from the written stoichiometric molecularity.
