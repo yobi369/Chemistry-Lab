@@ -23,8 +23,10 @@ export type RateParameterisation =
       readonly stochasticRateConstant: number;
     };
 
+export type ReactionRateParameterisation = RateParameterisation & { readonly reactionId: string };
+
 export interface ExperimentRecord {
-  readonly schemaVersion: 'chemistry-lab-experiment/v1';
+  readonly schemaVersion: 'chemistry-lab-experiment/v2';
   readonly createdAt: string;
   readonly software: {
     readonly name: 'Chemistry Lab';
@@ -32,7 +34,7 @@ export interface ExperimentRecord {
   };
   readonly model: ReactionNetwork;
   readonly initialCounts: SpeciesCounts;
-  readonly rateParameterisation: RateParameterisation;
+  readonly rateParameterisations: readonly ReactionRateParameterisation[];
   readonly simulation: {
     readonly durationSeconds: number;
     readonly seed: number;
@@ -49,18 +51,19 @@ export function createExperimentRecord(
   simulation: { durationSeconds: number; seed: number; maxEvents?: number },
   result: SimulationResult,
   createdAt = new Date().toISOString(),
-  rateParameterisation?: RateParameterisation,
+  rateParameterisations?: readonly ReactionRateParameterisation[],
 ): ExperimentRecord {
   return {
-    schemaVersion: 'chemistry-lab-experiment/v1',
+    schemaVersion: 'chemistry-lab-experiment/v2',
     createdAt,
     software: { name: 'Chemistry Lab', researchKernel: 'gillespie-direct/v1' },
     model,
     initialCounts: { ...initialCounts },
-    rateParameterisation: rateParameterisation ?? {
-      kind: 'direct_stochastic',
-      stochasticRateConstant: model.reactions[0]?.stochasticRateConstant ?? 0,
-    },
+    rateParameterisations: rateParameterisations ?? model.reactions.map((reaction) => ({
+      reactionId: reaction.id,
+      kind: 'direct_stochastic' as const,
+      stochasticRateConstant: reaction.stochasticRateConstant,
+    })),
     simulation: {
       durationSeconds: simulation.durationSeconds,
       seed: simulation.seed,
@@ -71,7 +74,7 @@ export function createExperimentRecord(
       'Well-mixed reaction network.',
       'Constant-volume interpretation.',
       'Continuous-time Markov jump process simulated with the Gillespie direct method.',
-      'No automatic conversion from macroscopic concentration-based rate constants.',
+      'Any kinetic conversion pathway supplied by the researcher is recorded per reaction channel in rateParameterisations.',
       'Species formula compositions and formal charges are user-supplied model metadata.',
     ],
     result,
