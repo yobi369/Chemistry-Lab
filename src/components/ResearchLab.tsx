@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   parseReactionNetwork,
   balanceReactionNetwork,
+  analyzeStoichiometry,
   simulateEnsemble,
   simulateGillespie,
   convertMacroscopicRateConstant,
@@ -96,6 +97,9 @@ export const ResearchLab: React.FC = () => {
   }), [activeNetwork, rateValues]);
 
   const validationIssues = useMemo(() => validateNetwork(network), [network]);
+  const stoichiometricAnalysis = useMemo(() => {
+    try { return analyzeStoichiometry(network); } catch { return null; }
+  }, [network]);
   const selectedReaction = network.reactions.find((reaction) => reaction.id === selectedReactionId) ?? network.reactions[0];
   const selectedReactionOrder = selectedReaction?.reactants.reduce((sum, term) => sum + term.coefficient, 0) ?? 1;
   const initialCounts = useMemo(
@@ -510,6 +514,51 @@ export const ResearchLab: React.FC = () => {
                 {validationIssues.map((issue, index) => <li key={index}>{issue.message}</li>)}
               </ul>
             )}
+            {stoichiometricAnalysis && (
+              <div className="mt-4 rounded-xl border border-zinc-800 bg-black/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-zinc-300">Exact stoichiometric analysis</p>
+                  <span className="font-mono text-[10px] text-cyan-300">MATRIX RANK {stoichiometricAnalysis.rank}</span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {[
+                    ['Reaction cycles', stoichiometricAnalysis.independentReactionCycles],
+                    ['Conservation laws', stoichiometricAnalysis.independentConservationLaws],
+                    ['Species', stoichiometricAnalysis.speciesIds.length],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="rounded-lg bg-zinc-900 p-2">
+                      <p className="text-[10px] text-zinc-500">{label}</p>
+                      <p className="mt-1 font-mono text-sm text-zinc-200">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 overflow-x-auto">
+                  <table className="min-w-full text-[10px]">
+                    <thead><tr className="text-zinc-500"><th className="px-2 py-1 text-left">Species</th>{stoichiometricAnalysis.reactionIds.map(id => <th key={id} className="px-2 py-1 text-right">{id}</th>)}</tr></thead>
+                    <tbody>
+                      {stoichiometricAnalysis.matrix.map((row, index) => (
+                        <tr key={stoichiometricAnalysis.speciesIds[index]} className="border-t border-zinc-800">
+                          <td className="px-2 py-1 text-zinc-300">{network.species[index]?.label ?? stoichiometricAnalysis.speciesIds[index]}</td>
+                          {row.map((value, column) => <td key={stoichiometricAnalysis.reactionIds[column]} className="px-2 py-1 text-right font-mono text-cyan-200">{value}</td>)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {stoichiometricAnalysis.conservationBasis.length > 0 && (
+                  <div className="mt-3 border-t border-zinc-800 pt-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Left-nullspace invariants</p>
+                    {stoichiometricAnalysis.conservationBasis.map((vector, index) => (
+                      <p key={index} className="mt-1 break-words font-mono text-[10px] text-emerald-200">
+                        {vector.map((coefficient, speciesIndex) => coefficient === 0 ? null : `${coefficient === 1 ? '' : coefficient === -1 ? '−' : coefficient}${network.species[speciesIndex]?.label ?? stoichiometricAnalysis.speciesIds[speciesIndex]}`).filter(Boolean).join(' + ').replace(/\+ −/g, '− ')}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-2 text-[10px] leading-4 text-zinc-600">These are exact linear invariants of the declared stoichiometric matrix. Their physical meaning depends on correct species identities and model completeness.</p>
+              </div>
+            )}
+
           </div>
         </div>
 
