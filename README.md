@@ -121,3 +121,8 @@ The research kernel parses neutral molecular/formula-unit strings, including nes
 ## Experiment provenance and export
 
 Completed research-kernel runs can be exported as a versioned JSON reproducibility record containing the exact reaction network, initial populations, stochastic-rate-constant convention, duration, seed, assumptions and full event trajectory. A companion CSV export contains event times, reaction identifiers and per-species populations after each event. Keep the JSON record with any downstream plots or reported conclusions.
+
+
+## Ensemble analysis
+
+The Research Lab can run independent seeded SSA replicates and report final-population means, sample standard deviations, standard errors and normal-approximation 95% confidence intervals for the ensemble mean. Replicate seeds are derived deterministically from a base seed. Replicates that are cancelled or hit the event cap are not accepted as a completed ensemble. Confidence intervals are descriptive approximations and should not be used without checking distribution shape, sample size and model assumptions.
