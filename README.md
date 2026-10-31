@@ -141,3 +141,6 @@ The Research Lab accepts one neutral reaction equation per line. The parser buil
 ## Temperature-dependent kinetics
 
 The Research Lab includes an Arrhenius calculator for k(T) = A exp(−Ea/RT). Users provide a pre-exponential factor, activation energy in J/mol and temperature in kelvin. The pre-exponential factor carries the same units as the macroscopic rate constant for the selected reaction order. The calculated k(T) can be passed into the volume-aware macroscopic-to-stochastic conversion. This does not infer a mechanism, activation pathway or physically justified Arrhenius parameters.
+
+
+Experiment JSON exports now also record how the active stochastic rate was obtained: illustrative default, direct stochastic input, macroscopic k-to-c conversion, or Arrhenius k(T) followed by volume-aware conversion. Where applicable, the record includes the original k, volume, reaction order, A, Ea and temperature so the parameter pathway is auditable.
