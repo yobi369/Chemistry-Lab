@@ -131,3 +131,8 @@ The Research Lab can run independent seeded SSA replicates and report final-popu
 ## Experimental kinetic rate constants
 
 A rate-conversion utility maps macroscopic mass-action constants to the kernel's stochastic propensity convention when the user supplies reaction volume in litres. It assumes an elementary mass-action step, ideal well-mixed solution, constant volume, and a macroscopic rate law of the form r = k Π[Sᵢ]^νᵢ. The converter derives the required order-dependent units and applies the factorial correction for identical reactants. It does not infer physical units, temperature dependence, activities, or mechanisms; users must verify that the supplied k and reaction-order convention match the source experiment. The conversion is a mesoscopic convention whose deterministic correspondence is a large-population limit, not a promise of identical finite-population trajectories.
+
+
+## Multi-step reaction networks
+
+The Research Lab accepts one neutral reaction equation per line. The parser builds a shared species registry and independent reaction channels, then validates every channel for elemental and formal-charge balance. The UI assigns the same stochastic rate constant to each parsed channel for now; initial populations are configured explicitly per species. Reversible arrows are recognized as metadata, but only the written forward direction is simulated. The macroscopic-rate converter is limited to single-channel networks until per-channel kinetic parameters are supported.
