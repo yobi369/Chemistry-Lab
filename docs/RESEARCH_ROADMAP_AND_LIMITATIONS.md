@@ -4,9 +4,9 @@ This document describes the computational research methods exposed by the Chemis
 
 ## Parameter estimation
 
-`fitFirstOrderDecay` estimates the rate constant for the narrow model y(t)=y₀ exp(−kt) using ordinary least squares on ln(y). It returns the estimated initial value, rate, residual sum of squares, R² and an approximate 95% interval based on the regression standard error.
+`fitFirstOrderDecay` estimates the rate constant for the narrow model y(t)=y₀ exp(−kt) using least squares on ln(y). It returns the estimated initial value, rate, residual sum of squares, R² and an approximate 95% interval based on the regression standard error. When every observation supplies a standard deviation, it uses weighted least squares with the delta-method approximation SD(ln y) ≈ SD(y)/y. Partial uncertainty metadata is rejected.
 
-**Assumptions:** positive observations; first-order irreversible decay; constant conditions; independent, homoscedastic errors in log space for the usual regression uncertainty interpretation. The current implementation does not use supplied observation standard deviations as weights, does not handle censored/zero observations, and does not fit multi-step mechanisms. Do not use this estimator when those assumptions are not defensible.
+**Assumptions:** positive observations; first-order irreversible decay; constant conditions; independent errors; and, for conventional uncertainty interpretation, homoscedastic log-space errors (unweighted) or credible measurement SDs (weighted). The current implementation does not handle censored/zero observations or fit multi-step mechanisms. Do not use this estimator when those assumptions are not defensible.
 
 ## Sensitivity and uncertainty
 
@@ -22,14 +22,16 @@ This document describes the computational research methods exposed by the Chemis
 
 The standard-state helper calculates ΔG°=ΔH°−TΔS° and ln K°=−ΔG°/(RT); the van 't Hoff helper assumes temperature-independent ΔH° over the requested interval; the reaction free-energy helper calculates ΔG=ΔG°+RT ln Q.
 
+`analyzeReactionThermodynamics` derives reaction ΔG° from species standard Gibbs formation energies and evaluates Q and ΔG at supplied dimensionless activities. A negative ΔG indicates a thermodynamic forward driving force under the declared reaction convention; positive ΔG indicates reverse driving force. It does not change kinetic rates or generate reverse channels.
+
 These are standard-state relationships. The user must provide consistent standard-state thermodynamic data, temperature, activities and reaction quotient. The functions do not calculate activity coefficients, non-ideal solution behaviour, heat capacities, phase transitions, electrochemical potentials or pressure corrections. Equilibrium constants are dimensionless under a defined standard-state convention.
 
 ## Reaction-network and thermodynamic integration boundary
 
-The existing stochastic network remains a well-mixed continuous-time Markov jump model. Thermodynamic calculations are currently independent analysis functions; no automatic reverse-rate generation or detailed-balance enforcement is performed. A reversible network must not be inferred from a reversible arrow alone. Forward and reverse kinetic parameters and a clearly defined standard-state convention are required before coupling kinetics and equilibrium.
+The existing stochastic network remains a well-mixed continuous-time Markov jump model. Thermodynamic calculations are analysis functions; no automatic reverse-rate generation or detailed-balance enforcement is performed. A reversible network must not be inferred from a reversible arrow alone. Forward and reverse kinetic parameters and a clearly defined standard-state convention are required before coupling kinetics and equilibrium.
 
 ## Independent benchmark programme
 
-The automated analytical tests cover exact first-order survival statistics, competing first-order channel probabilities, regression recovery on noiseless first-order data, finite-difference sensitivity, zero-uncertainty propagation and thermodynamic identities. They are reproducible software checks, not independent implementations or external validation datasets.
+Automated analytical tests cover exact first-order survival statistics, competing first-order channel probabilities, regression recovery on noiseless first-order data, finite-difference sensitivity, uncertainty propagation and thermodynamic identities. A separate first-reaction SSA implementation is also compared statistically against the direct-method kernel on a mixed first-/second-order network. This independent in-repository implementation comparison is useful regression evidence, but is not a third-party implementation or published-data validation.
 
-The next validation tier should compare trajectories and ensemble moments against a separately maintained reference SSA implementation and published benchmark cases, record reference versions and tolerances, and include non-first-order combinatorics, birth/death systems, reversible systems with known equilibrium distributions, and parameter-recovery studies under realistic observation noise.
+The next validation tier should compare trajectories and ensemble moments against a separately maintained external SSA implementation and published benchmark cases, record reference versions and tolerances, and include birth/death systems, reversible systems with known equilibrium distributions, and parameter-recovery studies under realistic observation noise.
