@@ -162,3 +162,8 @@ The Research Lab includes an exact rational row-reduction balancer for neutral a
 
 
 Saved v2 JSON experiment records can now be imported back into the Research Lab. Import validation checks the network, populations, per-channel kinetic parameterisation and event-by-event population transitions before restoring the saved trajectory. This catches malformed or internally inconsistent files; it does not certify the scientific correctness of their model assumptions.
+
+
+## Stoichiometric network analysis
+
+The Research Lab calculates the exact integer stoichiometric matrix (products minus reactants), matrix rank, independent reaction-cycle dimension and a basis for the left nullspace. The left-nullspace vectors identify linear combinations of declared species counts conserved by the written network. The analysis is exact linear algebra over the declared reaction model; it cannot detect missing species, omitted reservoirs, unmodelled exchange or incorrect chemical identities.
