@@ -7,3 +7,4 @@ export * from './provenance';
 export * from './ensemble';
 export * from './rateConversion';
 export * from './arrhenius';
+export * from './balanceEquation';
