@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MolecularToolkitPanel } from './MolecularToolkitPanel';
+import { MechanismFittingPanel } from './MechanismFittingPanel';
 import {
   fitFirstOrderDecay,
   estimateLocalSensitivity,
@@ -236,6 +237,7 @@ export const AdvancedAnalysisPanel: React.FC<Props> = ({ network }) => {
           </div>}
         </article>
       </div>
+      <MechanismFittingPanel />
       <MolecularToolkitPanel />
       <p className="rounded-xl border border-amber-900/50 bg-amber-950/20 p-3 text-[10px] leading-5 text-amber-100/70">
         Model boundaries: parameter fitting here is limited to positive first-order decay; uncertainty covers the fitted rate only;
