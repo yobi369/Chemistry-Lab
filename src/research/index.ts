@@ -14,3 +14,4 @@ export * from './sensitivity';
 export * from './thermodynamics';
 export * from './molecularIdentity';
 export * from './reactionThermodynamics';
+export * from './rdkitToolkit';
