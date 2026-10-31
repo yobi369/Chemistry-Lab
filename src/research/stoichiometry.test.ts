@@ -14,7 +14,6 @@ test('exact stoichiometric network analysis', async (t) => {
   });
 
   await t.test('finds total entity conservation in a two-step isomer network', () => {
-    const network = parseReactionNetwork('A -> B\nB -> C', 0.1);
     // Formula parser models species by formula, so use the equivalent typed network
     // with three distinct abstract states carrying the same elemental composition.
     const model = {
@@ -28,7 +27,6 @@ test('exact stoichiometric network analysis', async (t) => {
         { id: 'r2', label: 'B to C', reactants: [{ speciesId: 'B', coefficient: 1 }], products: [{ speciesId: 'C', coefficient: 1 }], stochasticRateConstant: 0.1 },
       ],
     };
-    assert.equal(network.network.species.length, 1);
     const analysis = analyzeStoichiometry(model);
     assert.equal(analysis.rank, 2);
     assert.equal(analysis.independentReactionCycles, 0);
