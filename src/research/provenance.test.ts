@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { simulateGillespie } from './gillespie';
-import { createExperimentRecord, serializeExperiment, simulationEventsToCsv } from './provenance';
+import { createExperimentRecord, parseExperimentRecord, serializeExperiment, simulationEventsToCsv } from './provenance';
 import type { ReactionNetwork } from './types';
 
 const model: ReactionNetwork = {
@@ -35,6 +35,23 @@ test('experiment provenance exports', async (t) => {
     assert.equal(parsed.result.events.length, result.events.length);
     assert.equal(parsed.model.reactions[0].label, 'A → B, first order');
     assert.ok(parsed.assumptions.length > 0);
+  });
+
+
+  await t.test('imports and validates a complete experiment record', () => {
+    const imported = parseExperimentRecord(serializeExperiment(record));
+    assert.equal(imported.model.reactions[0].id, 'r1');
+    assert.equal(imported.result.finalCounts.A, result.finalCounts.A);
+  });
+
+  await t.test('rejects a tampered event population history', () => {
+    const tampered = JSON.parse(serializeExperiment(record));
+    if (tampered.result.events.length > 0) {
+      tampered.result.events[0].countsAfter.A += 1;
+    } else {
+      tampered.result.finalCounts.A += 1;
+    }
+    assert.throws(() => parseExperimentRecord(JSON.stringify(tampered)), /inconsistent/);
   });
 
   await t.test('exports event rows with escaped CSV text', () => {
