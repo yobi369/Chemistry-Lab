@@ -123,6 +123,37 @@ function informationEigenCondition(matrix: Matrix): number {
 function dot(a: readonly number[], b: readonly number[]): number {
   return a.reduce((sum, value, i) => sum + value * b[i], 0);
 }
+function scaledSensitivityInformation(jacobian: Matrix): {
+  readonly columnNorms: number[];
+  readonly normalizedInformation: Matrix;
+  readonly rank: number;
+  readonly conditionNumber: number;
+} {
+  const parameterCount = jacobian[0]?.length ?? 0;
+  const columnNorms = Array.from({length:parameterCount},(_,column)=>
+    Math.sqrt(jacobian.reduce((sum,row)=>sum+row[column]**2,0)));
+  const normalizedInformation = Array.from({length:parameterCount},(_,a)=>
+    Array.from({length:parameterCount},(_,b)=>
+      columnNorms[a]>0&&columnNorms[b]>0
+        ? jacobian.reduce((sum,row)=>sum+row[a]*row[b],0)/(columnNorms[a]*columnNorms[b])
+        : 0));
+  const basis:number[][]=[];
+  for(let column=0;column<parameterCount;column++){
+    if(columnNorms[column]<=1e-14) continue;
+    const vector=jacobian.map(row=>row[column]/columnNorms[column]);
+    for(let pass=0;pass<2;pass++){
+      for(const q of basis){
+        const projection=dot(vector,q);
+        for(let i=0;i<vector.length;i++) vector[i]-=projection*q[i];
+      }
+    }
+    const residualNorm=Math.sqrt(dot(vector,vector));
+    if(residualNorm>1e-8) basis.push(vector.map(value=>value/residualNorm));
+  }
+  return {columnNorms,normalizedInformation,rank:basis.length,
+    conditionNumber:informationEigenCondition(normalizedInformation)};
+}
+
 function integrate(
   mechanism: KineticMechanism,
   rateConstants: readonly number[],
@@ -321,21 +352,25 @@ export function fitMassActionMechanism(
     }
   }
   const finalJ = jacobianAt(theta), n = theta.length, m = observations.length;
-  const information = Array.from({length:n},(_,a)=>Array.from({length:n},(_,b)=>
-    finalJ.reduce((sum,row)=>sum+row[a]*row[b],0)));
-  const inverse = invertMatrix(information);
+  const information = scaledSensitivityInformation(finalJ);
+  const inverseNormalized = information.rank === n
+    ? invertMatrix(information.normalizedInformation) : null;
   const dof = m-n;
   const scale = hasSd ? 1 : cost/dof;
-  const covariance = inverse && dof > 0 ? inverse.map(row=>row.map(value=>value*scale)) : null;
+  const covariance = inverseNormalized && dof > 0
+    ? inverseNormalized.map((row,i)=>row.map((value,j)=>
+        value*scale/(information.columnNorms[i]*information.columnNorms[j]))) : null;
   const standardErrors = covariance ? Object.fromEntries(parameterOrder.map((id,i)=>[id,Math.sqrt(Math.max(0,covariance[i][i]))])) : null;
   const correlations = covariance ? Object.fromEntries(parameterOrder.map((id,i)=>[id,
     Object.fromEntries(parameterOrder.map((other,j)=>[other,
       covariance[i][i] > 0 && covariance[j][j] > 0 ? covariance[i][j]/Math.sqrt(covariance[i][i]*covariance[j][j]) : Number.NaN]))])) : null;
-  const condition = informationEigenCondition(information);
+  const condition = information.conditionNumber;
+  const locallyIdentifiable = information.rank === n && condition <= 1e10;
   const warnings: string[] = [];
   if (!converged) warnings.push('Optimizer did not meet the convergence criterion; inspect residuals and initial guesses.');
-  if (!inverse) warnings.push('Sensitivity information matrix is rank deficient or ill-conditioned; parameter uncertainties and correlations are not identifiable.');
-  if (condition > 1e10) warnings.push('Large information-matrix condition number indicates practical parameter non-identifiability.');
+  if (information.rank < n) warnings.push(`Sensitivity Jacobian rank ${information.rank} of ${n}; some parameters are locally unidentifiable and covariance is unavailable.`);
+  if (information.rank === n && !inverseNormalized) warnings.push('Scaled sensitivity information matrix could not be stably inverted; parameter uncertainties and correlations are unavailable.');
+  if (condition > 1e10) warnings.push('Large scaled information-matrix condition number indicates practical parameter non-identifiability.');
   if (!hasSd) warnings.push('No measurement SDs supplied: covariance is scaled by residual variance and assumes independent, homoscedastic errors.');
   if (hasSd) warnings.push('Supplied SDs are treated as known independent measurement standard deviations; correlated observation errors are not modelled.');
   if (orderedParameters.some((p,i)=>theta[i] <= p.lowerBound+1e-8*Math.max(1,p.upperBound-p.lowerBound) ||
@@ -345,7 +380,7 @@ export function fitMassActionMechanism(
     model:'mass-action-mechanism-rk4-levenberg-marquardt',
     parameterEstimates:Object.fromEntries(parameterOrder.map((id,i)=>[id,theta[i]])),
     standardErrors, correlationMatrix:correlations, covarianceMatrix:covariance,
-    identifiableParameterCount:inverse ? n : 0, parameterCount:n, locallyIdentifiable:Boolean(inverse),
+    identifiableParameterCount:information.rank, parameterCount:n, locallyIdentifiable,
     informationConditionNumber:condition, weightedResidualSumSquares:cost, degreesOfFreedom:dof,
     iterations, converged,
     fitted:observations.map((o,i)=>({timeSeconds:o.timeSeconds,speciesId:o.speciesId,observed:o.value,predicted:fittedValues[i],residual:o.value-fittedValues[i]})),

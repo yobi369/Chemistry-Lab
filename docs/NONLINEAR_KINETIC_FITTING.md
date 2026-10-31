@@ -18,7 +18,7 @@ All concentrations must use one consistent unit. Rate-constant units depend on r
 
 The optimizer uses finite-difference sensitivities and a damped normal-equation solve. Observation standard deviations may be supplied for every observation; these define independent weighted least squares. If omitted, observations are treated as independent and homoscedastic and covariance is scaled by residual variance. The reported covariance, standard errors and correlation matrix are local linear approximations based on the sensitivity Jacobian at the optimum.
 
-Local identifiability is assessed from invertibility and conditioning of the weighted sensitivity information matrix. A singular matrix yields no covariance estimate and an explicit warning. Estimates at bounds and large condition numbers are flagged.
+Local identifiability is assessed from a re-orthogonalized numerical rank estimate of the weighted sensitivity Jacobian, with column scaling to reduce dependence on parameter units. The reported condition number is computed from the normalized sensitivity information matrix. The number of locally identifiable parameter directions is reported separately from the total parameter count. A rank-deficient matrix yields no covariance estimate and an explicit warning. Estimates at bounds and large scaled condition numbers are flagged.
 
 ## Numerical and scientific limitations
 

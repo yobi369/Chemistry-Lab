@@ -76,7 +76,7 @@ export const MechanismFittingPanel:React.FC=()=>{
     {result&&<div className="mt-4 space-y-3 rounded-xl bg-black/30 p-3 text-xs">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div><p className="text-zinc-500">Converged</p><p className={result.converged?'text-emerald-300':'text-amber-300'}>{result.converged?'Yes':'No'}</p></div>
-        <div><p className="text-zinc-500">Local identifiability</p><p className={result.locallyIdentifiable?'text-emerald-300':'text-amber-300'}>{result.locallyIdentifiable?'Full rank':'Rank deficient'}</p></div>
+        <div><p className="text-zinc-500">Local identifiability</p><p className={result.locallyIdentifiable?'text-emerald-300':'text-amber-300'}>{result.identifiableParameterCount}/{result.parameterCount} directions</p></div>
         <div><p className="text-zinc-500">Iterations</p><p className="font-mono text-zinc-200">{result.iterations}</p></div>
         <div><p className="text-zinc-500">Information condition</p><p className="font-mono text-zinc-200">{Number.isFinite(result.informationConditionNumber)?pretty(result.informationConditionNumber):'∞'}</p></div>
       </div>
