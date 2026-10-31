@@ -67,3 +67,27 @@ test('multi-step reaction network parser', async (t) => {
     assert.throws(() => parseReactionNetwork('# no equations', 1), /at least one reaction/);
   });
 });
+
+test('ionic charge and electron bookkeeping', async (t) => {
+  await t.test('balances an ionic equation with an explicit electron', async () => {
+    const { parseReactionEquation, equationToNetwork } = await import('./formula');
+    const parsed = parseReactionEquation('MnO4^- + 8 H^+ + 5 e^- -> Mn^2+ + 4 H2O');
+    const network = equationToNetwork(parsed, 0.1);
+    assert.deepEqual(validateNetwork(network), []);
+    assert.equal(network.species.find(species => species.id === 'electron')?.charge, -1);
+  });
+
+  await t.test('balances a charged metal ion with hydroxide', async () => {
+    const { parseReactionEquation, equationToNetwork } = await import('./formula');
+    const parsed = parseReactionEquation('Fe^3+ + 3 OH^- -> Fe(OH)3');
+    assert.deepEqual(validateNetwork(equationToNetwork(parsed, 0.1)), []);
+  });
+
+  await t.test('keeps different charge states as separate species', async () => {
+    const { parseReactionEquation } = await import('./formula');
+    const parsed = parseReactionEquation('Fe^2+ + Ce^4+ -> Fe^3+ + Ce^3+');
+    assert.notEqual(parsed.reactants[0].speciesId, parsed.products[0].speciesId);
+    assert.equal(parsed.reactants[0].charge, 2);
+    assert.equal(parsed.products[0].charge, 3);
+  });
+});

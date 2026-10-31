@@ -18,8 +18,8 @@ function addAtoms(target: Record<string, number>, source: Record<string, number>
 
 /**
  * Parse a neutral molecular/formula-unit string, including nested () and []
- * groups and hydrate components such as CuSO4·5H2O. Ionic charge must be
- * supplied separately; charge suffixes are intentionally not guessed here.
+ * groups and hydrate components such as CuSO4·5H2O. Ionic charge belongs in
+ * the equation term suffix (for example Fe^3+ or SO4^2-), not in this parser.
  */
 export function parseChemicalFormula(input: string): Record<string, number> {
   const formula = input.trim();
@@ -109,6 +109,7 @@ export interface ParsedEquationTerm {
   readonly formula: string;
   readonly coefficient: number;
   readonly speciesId: string;
+  readonly charge: number;
 }
 
 export interface ParsedChemicalEquation {
@@ -117,9 +118,71 @@ export interface ParsedChemicalEquation {
   readonly reactants: readonly ParsedEquationTerm[];
   readonly products: readonly ParsedEquationTerm[];
   readonly compositions: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  readonly charges: Readonly<Record<string, number>>;
 }
 
-/** Parse neutral formula equations such as 2 H2 + O2 -> 2 H2O. */
+function splitReactionTerms(side: string): string[] {
+  const terms: string[] = [];
+  let start = 0;
+  let depth = 0;
+  for (let index = 0; index < side.length; index += 1) {
+    const char = side[index];
+    if (char === '(' || char === '[') depth += 1;
+    if (char === ')' || char === ']') depth -= 1;
+    if (depth < 0) throw new ChemicalParseError('Unexpected closing group in reaction side.');
+    if (char === '+' && depth === 0) {
+      // A plus sign immediately following ^ or ^digits is an ionic charge,
+      // not a separator between chemical terms.
+      const prefix = side.slice(start, index).trimEnd();
+      if (/\^\d*$/.test(prefix)) continue;
+      terms.push(side.slice(start, index));
+      start = index + 1;
+    }
+  }
+  if (depth !== 0) throw new ChemicalParseError('Unclosed group in reaction side.');
+  terms.push(side.slice(start));
+  return terms;
+}
+
+function parseEquationTerm(rawTerm: string): {
+  coefficient: number;
+  formula: string;
+  speciesId: string;
+  composition: Record<string, number>;
+  charge: number;
+} {
+  const match = rawTerm.trim().match(/^(\d+)?\s*([A-Za-z][A-Za-z0-9()[\]·.]*)?(?:\^(\d*)([+-]))?$/);
+  if (!match || !match[2]) {
+    throw new ChemicalParseError(`Could not parse reaction term "${rawTerm.trim()}". Use a coefficient, neutral formula and optional caret charge such as Fe^3+ or SO4^2-.`);
+  }
+  const coefficient = match[1] ? Number(match[1]) : 1;
+  if (!Number.isSafeInteger(coefficient) || coefficient < 1) {
+    throw new ChemicalParseError('Reaction coefficients must be positive safe integers.');
+  }
+  const rawFormula = match[2];
+  const chargeMagnitude = match[4] ? (match[3] ? Number(match[3]) : 1) : 0;
+  if (!Number.isSafeInteger(chargeMagnitude) || (match[4] && chargeMagnitude < 1)) {
+    throw new ChemicalParseError('Ionic charge magnitude must be a positive safe integer.');
+  }
+  const charge = match[4] === '+' ? chargeMagnitude : match[4] === '-' ? -chargeMagnitude : 0;
+
+  if (rawFormula === 'e') {
+    if (charge !== -1) throw new ChemicalParseError('Electron species must be written e^-.');
+    return { coefficient, formula: 'e⁻', speciesId: 'electron', composition: {}, charge: -1 };
+  }
+
+  const chargeLabel = charge === 0 ? '' : `^${Math.abs(charge) === 1 ? '' : Math.abs(charge)}${charge > 0 ? '+' : '-'}`;
+  const formula = `${rawFormula}${chargeLabel}`;
+  return {
+    coefficient,
+    formula,
+    speciesId: `formula:${formula}`,
+    composition: parseChemicalFormula(rawFormula),
+    charge,
+  };
+}
+
+/** Parse neutral and ionic formula equations such as Fe^3+ + 3 OH^- -> Fe(OH)3. */
 export function parseReactionEquation(input: string): ParsedChemicalEquation {
   const source = input.trim();
   const arrowMatches = [...source.matchAll(/(<=>|⇌|↔|->|→)/g)];
@@ -134,28 +197,26 @@ export function parseReactionEquation(input: string): ParsedChemicalEquation {
   if (!left || !right) throw new ChemicalParseError('A reaction needs reactants and products on both sides.');
 
   const compositions: Record<string, Record<string, number>> = {};
+  const charges: Record<string, number> = {};
   const parseSide = (side: string): ParsedEquationTerm[] => {
-    const rawTerms = side.split('+');
+    const rawTerms = splitReactionTerms(side);
     if (rawTerms.some((term) => !term.trim())) throw new ChemicalParseError('Reaction terms cannot be empty.');
     const combined = new Map<string, number>();
 
     for (const rawTerm of rawTerms) {
-      const match = rawTerm.trim().match(/^(\d+)?\s*([A-Za-z][A-Za-z0-9()[\]·.]*)$/);
-      if (!match) throw new ChemicalParseError(`Could not parse reaction term "${rawTerm.trim()}". Use a coefficient followed by a neutral formula.`);
-      const coefficient = match[1] ? Number(match[1]) : 1;
-      if (!Number.isSafeInteger(coefficient) || coefficient < 1) throw new ChemicalParseError('Reaction coefficients must be positive safe integers.');
-      const formula = match[2];
-      const speciesId = `formula:${formula}`;
-      compositions[speciesId] ??= parseChemicalFormula(formula);
-      const next = (combined.get(speciesId) ?? 0) + coefficient;
+      const parsed = parseEquationTerm(rawTerm);
+      compositions[parsed.speciesId] ??= parsed.composition;
+      charges[parsed.speciesId] = parsed.charge;
+      const next = (combined.get(parsed.speciesId) ?? 0) + parsed.coefficient;
       if (!Number.isSafeInteger(next)) throw new ChemicalParseError('Combined stoichiometric coefficient exceeds the safe integer range.');
-      combined.set(speciesId, next);
+      combined.set(parsed.speciesId, next);
     }
 
     return [...combined].map(([speciesId, coefficient]) => ({
       speciesId,
-      formula: speciesId.slice('formula:'.length),
       coefficient,
+      formula: speciesId === 'electron' ? 'e⁻' : speciesId.slice('formula:'.length),
+      charge: charges[speciesId],
     }));
   };
 
@@ -165,19 +226,20 @@ export function parseReactionEquation(input: string): ParsedChemicalEquation {
     reactants: parseSide(left),
     products: parseSide(right),
     compositions,
+    charges,
   };
 }
 
-/** Convert a parsed neutral equation to the research kernel's forward channel. */
+/** Convert a parsed ionic/neutral equation to its written forward channel. */
 export function equationToNetwork(
   equation: ParsedChemicalEquation,
   stochasticRateConstant: number,
 ): ReactionNetwork {
   const species = Object.entries(equation.compositions).map(([id, composition]) => ({
     id,
-    label: id.slice('formula:'.length),
+    label: id === 'electron' ? 'e⁻' : id.slice('formula:'.length),
     composition,
-    charge: 0,
+    charge: equation.charges[id] ?? 0,
   }));
   const toTerms = (terms: readonly ParsedEquationTerm[]): StoichiometricTerm[] =>
     terms.map(({ speciesId, coefficient }) => ({ speciesId, coefficient }));
@@ -200,10 +262,9 @@ export interface ParsedReactionNetwork {
 }
 
 /**
- * Parse one neutral reaction equation per line. Blank lines and lines whose
- * first non-whitespace character is # are ignored. Each channel receives the
- * same supplied stochastic rate constant; per-channel rate editing is a
- * separate modelling step.
+ * Parse one neutral or ionic reaction equation per line. Blank lines and
+ * lines whose first non-whitespace character is # are ignored. Each channel
+ * receives the same supplied stochastic rate constant.
  */
 export function parseReactionNetwork(
   input: string,
@@ -217,6 +278,7 @@ export function parseReactionNetwork(
 
   const equations = lines.map(parseReactionEquation);
   const compositions = new Map<string, Readonly<Record<string, number>>>();
+  const charges = new Map<string, number>();
   const reactions = equations.map((equation, index) => {
     for (const [speciesId, composition] of Object.entries(equation.compositions)) {
       const previous = compositions.get(speciesId);
@@ -224,6 +286,7 @@ export function parseReactionNetwork(
         throw new ChemicalParseError(`Formula "${speciesId}" resolved to inconsistent elemental compositions.`);
       }
       compositions.set(speciesId, composition);
+      charges.set(speciesId, equation.charges[speciesId] ?? 0);
     }
     const toTerms = (terms: readonly ParsedEquationTerm[]): StoichiometricTerm[] =>
       terms.map(({ speciesId, coefficient }) => ({ speciesId, coefficient }));
@@ -238,9 +301,9 @@ export function parseReactionNetwork(
 
   const species = [...compositions].map(([id, composition]) => ({
     id,
-    label: id.slice('formula:'.length),
+    label: id === 'electron' ? 'e⁻' : id.slice('formula:'.length),
     composition,
-    charge: 0,
+    charge: charges.get(id) ?? 0,
   }));
 
   return {
