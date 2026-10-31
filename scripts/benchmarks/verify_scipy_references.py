@@ -37,6 +37,49 @@ def verify_case(name, rhs, initial, rtol, atol):
         raise SystemExit(f"{name}: independent BDF and Radau solutions disagree")
     print(f"PASS {name}: BDF/Radau agreement, positivity and conservation")
 
+
+def verify_spatial_2d():
+    case = json.loads((ROOT / "benchmarks/spatial2d_scipy_reference.json").read_text())
+    domain = case["domain"]
+    nx, ny = domain["gridColumns"], domain["gridRows"]
+    dx, dy = domain["widthMeters"]/nx, domain["heightMeters"]/ny
+    diffusion = domain["diffusionCoefficientM2PerS"]
+    final_time = domain["timeSeconds"]
+    x = (np.arange(nx)+0.5)*dx
+    y = (np.arange(ny)+0.5)*dy
+    xx, yy = np.meshgrid(x,y)
+    initial = (1.0+0.2*np.cos(np.pi*xx)*np.cos(np.pi*yy)).reshape(-1)
+
+    def rhs(_time, flat):
+        grid = flat.reshape(ny,nx)
+        derivative = np.zeros_like(grid)
+        for row in range(ny):
+            for col in range(nx):
+                value = grid[row,col]
+                left = 0.0 if col == 0 else diffusion*(value-grid[row,col-1])/dx
+                right = 0.0 if col == nx-1 else diffusion*(grid[row,col+1]-value)/dx
+                down = 0.0 if row == 0 else diffusion*(value-grid[row-1,col])/dy
+                up = 0.0 if row == ny-1 else diffusion*(grid[row+1,col]-value)/dy
+                derivative[row,col] = (right-left)/dx+(up-down)/dy
+        return derivative.reshape(-1)
+
+    solutions = {}
+    for method, fixture_key in (("BDF","referenceByBDF"),("Radau","referenceByRadau")):
+        result = solve_ivp(rhs,(0.0,final_time),initial,method=method,rtol=1e-11,atol=1e-13)
+        if not result.success:
+            raise SystemExit(f"spatial2d/{method} failed: {result.message}")
+        grid = result.y[:,-1].reshape(ny,nx)
+        reference = np.asarray(case[fixture_key],dtype=float)
+        if not np.allclose(grid,reference,rtol=2e-7,atol=2e-12):
+            raise SystemExit(f"spatial2d/{method} differs from frozen reference")
+        if np.min(grid)<-2e-12 or abs(float(grid.sum())-float(initial.sum()))>2e-9:
+            raise SystemExit(f"spatial2d/{method} violated positivity or no-flux conservation")
+        solutions[method]=grid
+        print(f"PASS spatial2d/{method}: nfev={result.nfev}, njev={result.njev}, nlu={result.nlu}")
+    if not np.allclose(solutions["BDF"],solutions["Radau"],rtol=2e-7,atol=2e-12):
+        raise SystemExit("spatial2d: independent BDF and Radau solutions disagree")
+    print("PASS spatial2d: independent method-of-lines BDF/Radau agreement, positivity and conservation")
+
 def main():
     verify_case("sequentialAtoBtoC",
         lambda t,y: [-0.7*y[0], 0.7*y[0]-0.25*y[1], 0.25*y[1]],
@@ -46,6 +89,7 @@ def main():
                      0.04*y[0]-1e4*y[1]*y[2]-3e7*y[1]**2,
                      3e7*y[1]**2],
         [1.0,0.0,0.0], 1e-11, [1e-14,1e-18,1e-14])
+    verify_spatial_2d()
 
 if __name__ == "__main__":
     main()
