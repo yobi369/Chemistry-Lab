@@ -47,7 +47,7 @@ export const SpatialChemistry2DPanel:React.FC=()=>{
     <div><p className="text-zinc-500">Stability number</p><p className="mt-1 font-mono">{pretty(result.stabilityNumber)}</p></div>
     <div><p className="text-zinc-500">Boundary</p><p className="mt-1 font-mono">{result.boundaryCondition}</p></div>
    </div>
-   {Object.entries(result.concentrationsMolPerM3).map(([id,grid])=><div key={id} className="overflow-x-auto"><p className="mb-1 text-zinc-500">{id} concentration grid (mol/m³)</p><table className="text-[10px]"><tbody>{grid.map((row,y)=><tr key={y}>{row.map((value,x)=><td key={x} className="min-w-14 border border-zinc-800 p-1 text-center font-mono">{pretty(value)}</td>)}</tr>)}</tbody></table></div>)}
+   {Object.entries(result.concentrationsMolPerM3).map(([id,grid])=><div key={id} className="overflow-x-auto"><p className="mb-1 text-zinc-500">{id} concentration grid (mol/m³)</p><table className="text-[10px]"><tbody>{(grid as readonly (readonly number[])[]).map((row,y)=><tr key={y}>{row.map((value,x)=><td key={x} className="min-w-14 border border-zinc-800 p-1 text-center font-mono">{pretty(value)}</td>)}</tr>)}</tbody></table></div>)}
   </div>}
   <p className="mt-3 text-[10px] leading-5 text-zinc-500">Explicit first-order model. CI checks manufactured-solution convergence and an independent SciPy BDF/Radau method-of-lines reference case. This is not a stiff or general-purpose PDE solver.</p>
  </article>;
