@@ -70,6 +70,7 @@ export interface SimulationResult {
   readonly finalCounts: SpeciesCounts;
   readonly events: readonly SimulationEvent[];
   readonly elapsedSeconds: number;
-  readonly terminatedBy: 'time_limit' | 'no_enabled_reactions' | 'event_limit';
+  readonly terminatedBy: 'time_limit' | 'no_enabled_reactions' | 'event_limit'
+  | 'cancelled';
   readonly seed: number;
 }
