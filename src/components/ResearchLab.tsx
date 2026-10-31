@@ -123,7 +123,7 @@ export const ResearchLab: React.FC = () => {
         : '';
       setEquationFeedback({
         valid: true,
-        message: `Loaded ${candidate.reactions.length} balanced reaction channel(s). The same stochastic c is assigned to each channel; edit initial populations species by species below.${directionNote}`,
+        message: `Loaded ${candidate.reactions.length} balanced reaction channel(s). The same stochastic c is assigned to every channel; edit initial populations species by species below.${directionNote}`,
       });
     } catch (cause) {
       setEquationFeedback({
@@ -193,8 +193,8 @@ export const ResearchLab: React.FC = () => {
     setResult(null);
     setEnsembleResult(null);
     try {
-      if (!Number.isSafeInteger(population) || population < 0) {
-        throw new Error('Initial population per reactant coefficient must be a non-negative integer.');
+      if (initialCountIssues.length) {
+        throw new Error(initialCountIssues.map((issue) => issue.message).join(' '));
       }
       const seconds = Number(duration);
       const randomSeed = Number(seed);
@@ -322,7 +322,7 @@ export const ResearchLab: React.FC = () => {
                     className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs outline-none focus:border-cyan-500" />
                 </label>
               </div>
-              <button onClick={convertRateConstant} className="mt-3 w-full rounded-lg border border-cyan-800 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-900/50">Convert and apply stochastic c</button>
+              <button onClick={convertRateConstant} disabled={network.reactions.length !== 1} className="mt-3 w-full rounded-lg border border-cyan-800 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-900/50 disabled:cursor-not-allowed disabled:opacity-40">{network.reactions.length === 1 ? 'Convert and apply stochastic c' : 'Rate conversion requires one reaction channel'}</button>
               {conversionFeedback && <p role="status" className="mt-2 break-words text-[11px] leading-5 text-cyan-200">{conversionFeedback}</p>}
               <p className="mt-2 text-[10px] leading-4 text-zinc-600">Assumes an elementary mass-action step, ideal well-mixed solution, constant volume and the standard large-population rate-law convention. Finite-population stochastic trajectories may differ from deterministic concentration equations.</p>
             </div>
