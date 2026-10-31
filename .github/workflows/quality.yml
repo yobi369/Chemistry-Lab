@@ -34,3 +34,7 @@ jobs:
         run: python scripts/benchmarks/verify_scipy_references.py
       - name: Build application
         run: bun run build
+      - name: Install pinned RDKit.js runtime for molecular smoke tests
+        run: npm install --no-save --package-lock=false @rdkit/rdkit@2026.9.1
+      - name: Verify RDKit canonical identity, stereochemistry, InChI and valence
+        run: node scripts/benchmarks/verify_rdkit_runtime.mjs
