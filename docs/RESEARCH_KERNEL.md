@@ -77,3 +77,8 @@ A network text input may contain multiple neutral reaction equations, one per li
 ## Arrhenius parameterisation
 
 The helper evaluates \(k(T)=A\exp(-E_a/(RT))\), with \(E_a\) in J mol⁻¹, \(T\) in K and \(R=8.31446261815324\) J mol⁻¹ K⁻¹. The pre-exponential factor \(A\) must carry the same dimensional units as the resulting macroscopic rate constant. This computes a user-specified empirical parameterisation; it does not infer activation energies, transition states, mechanisms, solvent effects or temperature-dependent activities.
+
+
+## Rate parameter provenance
+
+The versioned experiment record stores whether the stochastic constant was supplied directly, left at the illustrative preset, converted from a macroscopic rate constant, or derived from an Arrhenius parameterisation and then converted. Conversion records retain the macroscopic k, reaction order, expected units, volume and final stochastic c; Arrhenius records additionally retain A, Ea and T. This records the user's parameter pathway but does not independently verify the provenance or validity of the supplied experimental values.

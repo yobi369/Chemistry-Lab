@@ -11,7 +11,7 @@ import {
   serializeExperiment,
   simulationEventsToCsv,
 } from '../research';
-import type { EnsembleResult, ReactionNetwork, SimulationResult, SpeciesCounts } from '../research';
+import type { EnsembleResult, RateParameterisation, ReactionNetwork, SimulationResult, SpeciesCounts } from '../research';
 
 const DISSOCIATION_NETWORK: ReactionNetwork = {
   species: [
@@ -67,6 +67,8 @@ export const ResearchLab: React.FC = () => {
   const [initialPopulationValues, setInitialPopulationValues] = useState<Record<string, string>>(() => createDefaultInitialCounts(DISSOCIATION_NETWORK));
   const [duration, setDuration] = useState('10');
   const [rate, setRate] = useState('0.08');
+  const [rateParameterisation, setRateParameterisation] = useState<RateParameterisation>({ kind: 'illustrative_default', stochasticRateConstant: 0.08 });
+  const [pendingArrhenius, setPendingArrhenius] = useState<{ preExponentialFactor: number; activationEnergyJPerMol: number; temperatureKelvin: number; macroscopicRateConstant: number } | null>(null);
   const [macroscopicRate, setMacroscopicRate] = useState('1');
   const [preExponential, setPreExponential] = useState('1e7');
   const [activationEnergy, setActivationEnergy] = useState('50000');
@@ -119,6 +121,8 @@ export const ResearchLab: React.FC = () => {
       setActiveEquation(parsed.equations.map((equation) => equation.source).join('\\n'));
       setInitialPopulationValues(createDefaultInitialCounts(candidate));
       setRate('0.08');
+      setRateParameterisation({ kind: 'illustrative_default', stochasticRateConstant: 0.08 });
+      setPendingArrhenius(null);
       setConversionFeedback(null);
       setResult(null);
       setEnsembleResult(null);
@@ -147,6 +151,12 @@ export const ResearchLab: React.FC = () => {
         Number(temperatureKelvin),
       );
       setMacroscopicRate(String(calculated.rateConstant));
+      setPendingArrhenius({
+        preExponentialFactor: calculated.preExponentialFactor,
+        activationEnergyJPerMol: calculated.activationEnergyJPerMol,
+        temperatureKelvin: calculated.temperatureKelvin,
+        macroscopicRateConstant: calculated.rateConstant,
+      });
       setArrheniusFeedback(
         `k(T) = ${calculated.rateConstant.toExponential(6)}; exponential factor = ${calculated.exponentialFactor.toExponential(6)}. A's units are carried through unchanged.`,
       );
@@ -167,6 +177,28 @@ export const ResearchLab: React.FC = () => {
         Number(volumeLiters),
       );
       setRate(String(converted.stochasticRateConstant));
+      const pending = pendingArrhenius && pendingArrhenius.macroscopicRateConstant === Number(macroscopicRate)
+        ? pendingArrhenius
+        : null;
+      const parameterisation: RateParameterisation = pending
+        ? {
+            kind: 'arrhenius_conversion',
+            ...pending,
+            volumeLiters: Number(volumeLiters),
+            reactionOrder: converted.reactionOrder,
+            macroscopicUnits: converted.macroscopicUnits,
+            stochasticRateConstant: converted.stochasticRateConstant,
+          }
+        : {
+            kind: 'macroscopic_conversion',
+            macroscopicRateConstant: Number(macroscopicRate),
+            volumeLiters: Number(volumeLiters),
+            reactionOrder: converted.reactionOrder,
+            macroscopicUnits: converted.macroscopicUnits,
+            stochasticRateConstant: converted.stochasticRateConstant,
+          };
+      setRateParameterisation(parameterisation);
+      setPendingArrhenius(null);
       setResult(null);
       setEnsembleResult(null);
       setConversionFeedback(
@@ -326,7 +358,7 @@ export const ResearchLab: React.FC = () => {
             </label>
             <label className="block">
               <span className="text-xs text-zinc-400">Stochastic rate constant c (s⁻¹ per available reactant combination)</span>
-              <input type="number" min="0" step="0.01" value={rate} onChange={e => { setRate(e.target.value); setResult(null); setEnsembleResult(null); }}
+              <input type="number" min="0" step="0.01" value={rate} onChange={e => { setRate(e.target.value); setRateParameterisation({ kind: 'direct_stochastic', stochasticRateConstant: Number(e.target.value) }); setPendingArrhenius(null); setResult(null); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
             <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
@@ -360,7 +392,7 @@ export const ResearchLab: React.FC = () => {
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <label className="block">
                   <span className="text-[11px] text-zinc-400">Macroscopic k ({activeNetwork.reactions[0]?.reactants.reduce((sum, term) => sum + term.coefficient, 0) === 1 ? 's⁻¹' : `M⁻${Math.max(1, (activeNetwork.reactions[0]?.reactants.reduce((sum, term) => sum + term.coefficient, 0) ?? 1) - 1)} s⁻¹`})</span>
-                  <input type="number" min="0" step="any" value={macroscopicRate} onChange={e => setMacroscopicRate(e.target.value)}
+                  <input type="number" min="0" step="any" value={macroscopicRate} onChange={e => { setMacroscopicRate(e.target.value); setPendingArrhenius(null); }}
                     className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs outline-none focus:border-cyan-500" />
                 </label>
                 <label className="block">
@@ -451,7 +483,7 @@ export const ResearchLab: React.FC = () => {
                       durationSeconds: Number(duration),
                       seed: Number(seed),
                       maxEvents: 100_000,
-                    }, result);
+                    }, result, undefined, rateParameterisation);
                     downloadTextFile(`chemistry-lab-experiment-${Date.now()}.json`, serializeExperiment(record), 'application/json');
                   }} className="rounded-lg border border-cyan-800 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-900/50">
                     Export reproducibility record (.json)

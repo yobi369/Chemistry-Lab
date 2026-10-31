@@ -1,5 +1,28 @@
 import type { ReactionNetwork, SimulationResult, SpeciesCounts } from './types';
 
+export type RateParameterisation =
+  | { readonly kind: 'illustrative_default'; readonly stochasticRateConstant: number }
+  | { readonly kind: 'direct_stochastic'; readonly stochasticRateConstant: number }
+  | {
+      readonly kind: 'macroscopic_conversion';
+      readonly macroscopicRateConstant: number;
+      readonly volumeLiters: number;
+      readonly reactionOrder: number;
+      readonly macroscopicUnits: string;
+      readonly stochasticRateConstant: number;
+    }
+  | {
+      readonly kind: 'arrhenius_conversion';
+      readonly preExponentialFactor: number;
+      readonly activationEnergyJPerMol: number;
+      readonly temperatureKelvin: number;
+      readonly macroscopicRateConstant: number;
+      readonly volumeLiters: number;
+      readonly reactionOrder: number;
+      readonly macroscopicUnits: string;
+      readonly stochasticRateConstant: number;
+    };
+
 export interface ExperimentRecord {
   readonly schemaVersion: 'chemistry-lab-experiment/v1';
   readonly createdAt: string;
@@ -9,6 +32,7 @@ export interface ExperimentRecord {
   };
   readonly model: ReactionNetwork;
   readonly initialCounts: SpeciesCounts;
+  readonly rateParameterisation: RateParameterisation;
   readonly simulation: {
     readonly durationSeconds: number;
     readonly seed: number;
@@ -25,6 +49,7 @@ export function createExperimentRecord(
   simulation: { durationSeconds: number; seed: number; maxEvents?: number },
   result: SimulationResult,
   createdAt = new Date().toISOString(),
+  rateParameterisation?: RateParameterisation,
 ): ExperimentRecord {
   return {
     schemaVersion: 'chemistry-lab-experiment/v1',
@@ -32,6 +57,10 @@ export function createExperimentRecord(
     software: { name: 'Chemistry Lab', researchKernel: 'gillespie-direct/v1' },
     model,
     initialCounts: { ...initialCounts },
+    rateParameterisation: rateParameterisation ?? {
+      kind: 'direct_stochastic',
+      stochasticRateConstant: model.reactions[0]?.stochasticRateConstant ?? 0,
+    },
     simulation: {
       durationSeconds: simulation.durationSeconds,
       seed: simulation.seed,
