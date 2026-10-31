@@ -1,35 +1,44 @@
-# Spatial reaction–diffusion kernel (1-D)
+# Spatial reaction–diffusion and transport kernel (1-D)
 
-## Scope
+## Model and units
 
-`simulateReactionDiffusion1D` is a deterministic, cell-centred finite-volume solver for a one-dimensional domain. It couples Fickian diffusion to explicitly declared unimolecular mass-action channels. It is intentionally separate from the visual particle sandbox and the well-mixed stochastic SSA.
+`simulateReactionDiffusion1D` is a deterministic cell-centred finite-volume solver for
 
-## Units and equations
+`∂cᵢ/∂t = Dᵢ ∂²cᵢ/∂x² − uᵢ ∂cᵢ/∂x + Σᵣ νᵢᵣ kᵣ cⱼ(r)`
 
+with:
 - Domain length and cell width: m.
 - Time and time step: s.
 - Diffusion coefficient: m² s⁻¹.
+- Constant transport velocity: m s⁻¹.
 - Concentration: mol m⁻³.
 - First-order rate constant: s⁻¹.
 
-For species i, the continuum model is
+Diffusion uses conservative centred face fluxes. Advection uses a conservative first-order upwind flux. Reactions are explicit first-order unimolecular mass-action source terms. Diffusion, transport and reaction source terms are evaluated from the same old-time state in an explicit Euler step.
 
-`∂cᵢ/∂t = Dᵢ ∂²cᵢ/∂x² + Σᵣ νᵢᵣ kᵣ cⱼ(r)`
+## Boundary conditions
 
-where each reaction r has exactly one first-order reactant j(r), and νᵢᵣ is its product-minus-reactant stoichiometric contribution. The implementation uses explicit Euler time stepping and conservative face fluxes. Both domain boundaries have zero normal diffusive flux (Neumann/no-flux).
+- `no-flux` is the default. Diffusive and advective boundary-face fluxes are zero at both ends (impermeable walls).
+- `periodic` wraps both diffusion and advection face fluxes across the domain endpoints. This is suitable for periodic transport benchmarks, not open-flow inlet/outlet conditions.
 
-## Numerical restriction
+## Numerical stability and positivity
 
-For cell width Δx and time step Δt, the implementation enforces the sufficient explicit positivity/stability bound
+For cell width Δx, time step Δt, maximum diffusion coefficient Dmax, maximum absolute velocity umax, and maximum total first-order out-rate kout,max, the implementation enforces the conservative combined explicit restriction
 
-`Δt (2 Dmax / Δx² + kout,max) ≤ 1`
+`Δt (2 Dmax / Δx² + umax / Δx + kout,max) ≤ 1`.
 
-where kout,max is the largest sum of first-order rate constants leaving any one species. Users must refine Δx and reduce Δt together. The code rejects a step outside this bound rather than silently clipping an unstable trajectory. Small negative round-off values within tolerance are clamped to zero.
+An unstable step is rejected. The implementation also rejects non-finite or materially negative states; tiny negative round-off values within tolerance are clamped to zero. This is an explicit first-order time integrator with first-order upwind advection, not an adaptive or implicit solver.
 
-## Validation included
+## Numerical validation included
 
-Tests cover conservation of the spatial sum under no-flux diffusion, smoothing of a concentration pulse, preservation of a uniform field, first-order conversion against the explicit-Euler closed-form recurrence, non-negativity and rejection of an unstable time step.
+- No-flux diffusion conserves the spatially integrated concentration and smooths a pulse.
+- A uniform concentration field remains uniform under diffusion.
+- First-order conversion is checked against its explicit-Euler recurrence.
+- Periodic upwind transport moves a pulse in the expected direction, wraps across the boundary and conserves the spatial sum.
+- A manufactured Neumann solution, `c(x,t)=1+0.2 cos(πx/L) exp(−D(π/L)²t)`, is checked on successively refined meshes. With Δt proportional to Δx², the test requires approximately second-order overall refinement behaviour.
 
-## Not yet validated / limitations
+## Limitations
 
-This first solver is 1-D, deterministic, explicit and limited to unimolecular reactions. It does not implement advection, hydrodynamic transport, heterogeneous media, interfaces, adsorption, electro-migration, stochastic reaction-diffusion, adaptive time stepping, implicit solvers, 2-D/3-D geometry or coupled temperature fields. It has not yet been compared with a manufactured-solution convergence suite or an external PDE package. The stability bound is a conservative explicit-step restriction, not evidence of physical model validity. Independent mesh/time refinement and external reference comparisons remain required before quantitative research use.
+This solver is one-dimensional, deterministic, constant-coefficient and explicit. It does not implement multi-dimensional geometry, adaptive or implicit/stiff integration, high-order advection, dispersion tensors, heterogeneous media, reactive interfaces, adsorption, electro-migration, fluid momentum, variable density, temperature coupling, stochastic reaction-diffusion, or open-flow inlet/outlet boundary conditions.
+
+The manufactured-solution test verifies a smooth diffusion eigenmode and mesh/time refinement trend; it is not a substitute for comparison against a separately maintained PDE package, measured spatial concentration fields, or a broader manufactured-solution suite. The reaction model is limited to first-order channels. Quantitative research use still requires independent external PDE validation and application-specific model verification.

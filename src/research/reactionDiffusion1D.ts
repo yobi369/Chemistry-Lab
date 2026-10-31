@@ -4,6 +4,8 @@ export interface DiffusionSpecies {
   readonly id: string;
   /** Molecular diffusion coefficient in m^2 s^-1. */
   readonly diffusionCoefficientM2PerS: number;
+  /** Optional constant transport velocity in m s^-1 (positive is +x). */
+  readonly advectionVelocityMetersPerSecond?: number;
   /** Initial concentration in mol m^-3, one value per finite-volume cell. */
   readonly initialConcentrationMolPerM3: readonly number[];
 }
@@ -24,6 +26,8 @@ export interface ReactionDiffusion1DInput {
   readonly steps: number;
   readonly species: readonly DiffusionSpecies[];
   readonly reactions: readonly FirstOrderSpatialReaction[];
+  /** No-flux walls by default; periodic wrap is required for periodic transport tests. */
+  readonly boundaryCondition?: 'no-flux' | 'periodic';
 }
 
 export interface ReactionDiffusion1DResult {
@@ -32,24 +36,26 @@ export interface ReactionDiffusion1DResult {
   readonly timeStepSeconds: number;
   readonly steps: number;
   readonly stabilityNumber: number;
+  readonly boundaryCondition: 'no-flux' | 'periodic';
   /** species id -> cell-centred concentration array in mol m^-3. */
   readonly concentrationsMolPerM3: Readonly<Record<string, readonly number[]>>;
 }
 
 /**
- * Explicit finite-volume solver for 1-D diffusion plus unimolecular mass-action
- * reactions. Cell-centred concentrations use zero-flux (Neumann) boundaries.
- *
- * This is a deterministic continuum model, not the particle sandbox or SSA.
- * Stability/positivity requires dt * (2 D_max / dx^2 + max species out-rate) <= 1.
+ * Conservative 1-D finite-volume transport/reaction solver:
+ * ∂c/∂t = D ∂²c/∂x² - u ∂c/∂x + first-order reaction source.
+ * Diffusion uses centred face fluxes; advection uses first-order upwind fluxes.
+ * The time integrator is explicit Euler with a conservative positivity bound.
  */
 export function simulateReactionDiffusion1D(input: ReactionDiffusion1DInput): ReactionDiffusion1DResult {
   const { lengthMeters, timeStepSeconds: dt, steps, species, reactions } = input;
+  const boundaryCondition = input.boundaryCondition ?? 'no-flux';
   if (!Number.isFinite(lengthMeters) || lengthMeters <= 0 ||
       !Number.isFinite(dt) || dt <= 0 ||
       !Number.isSafeInteger(steps) || steps < 1 ||
-      !Array.isArray(species) || species.length < 1) {
-    throw new SimulationInputError('Length, time step, step count and species must be valid positive inputs.');
+      !Array.isArray(species) || species.length < 1 ||
+      !['no-flux', 'periodic'].includes(boundaryCondition)) {
+    throw new SimulationInputError('Length, time step, step count, boundary condition and species must be valid.');
   }
   const cells = species[0].initialConcentrationMolPerM3.length;
   if (!Number.isSafeInteger(cells) || cells < 2) {
@@ -59,10 +65,12 @@ export function simulateReactionDiffusion1D(input: ReactionDiffusion1DInput): Re
   for (const item of species) {
     if (!item.id || ids.has(item.id)) throw new SimulationInputError('Species ids must be non-empty and unique.');
     ids.add(item.id);
+    const velocity = item.advectionVelocityMetersPerSecond ?? 0;
     if (!Number.isFinite(item.diffusionCoefficientM2PerS) || item.diffusionCoefficientM2PerS < 0 ||
+        !Number.isFinite(velocity) ||
         item.initialConcentrationMolPerM3.length !== cells ||
         item.initialConcentrationMolPerM3.some(value => !Number.isFinite(value) || value < 0)) {
-      throw new SimulationInputError(`Species "${item.id}" has invalid diffusion or initial concentration data.`);
+      throw new SimulationInputError(`Species "${item.id}" has invalid diffusion, transport or initial concentration data.`);
     }
   }
   const outRates: Record<string, number> = Object.fromEntries(species.map(item => [item.id, 0]));
@@ -77,10 +85,11 @@ export function simulateReactionDiffusion1D(input: ReactionDiffusion1DInput): Re
   }
   const dx = lengthMeters / cells;
   const maxD = Math.max(...species.map(item => item.diffusionCoefficientM2PerS));
+  const maxVelocity = Math.max(...species.map(item => Math.abs(item.advectionVelocityMetersPerSecond ?? 0)));
   const maxOutRate = Math.max(...Object.values(outRates));
-  const stabilityNumber = dt * (2 * maxD / (dx * dx) + maxOutRate);
+  const stabilityNumber = dt * (2 * maxD / (dx * dx) + maxVelocity / dx + maxOutRate);
   if (stabilityNumber > 1 + 1e-12) {
-    throw new SimulationInputError(`Explicit solver unstable: stability number ${stabilityNumber} exceeds 1. Reduce the time step or refine the grid.`);
+    throw new SimulationInputError(`Explicit solver unstable: combined diffusion/advection/reaction stability number ${stabilityNumber} exceeds 1. Reduce the time step or refine the grid.`);
   }
 
   const values: Record<string, number[]> = Object.fromEntries(
@@ -90,19 +99,31 @@ export function simulateReactionDiffusion1D(input: ReactionDiffusion1DInput): Re
     const next: Record<string, number[]> = {};
     for (const item of species) {
       const current = values[item.id];
+      const velocity = item.advectionVelocityMetersPerSecond ?? 0;
       const updated = current.map((value, cell) => {
-        const leftFlux = cell === 0 ? 0 : item.diffusionCoefficientM2PerS * (value - current[cell - 1]) / dx;
-        const rightFlux = cell === cells - 1 ? 0 : item.diffusionCoefficientM2PerS * (current[cell + 1] - value) / dx;
-        return value + dt * (rightFlux - leftFlux) / dx;
+        const leftIndex = (cell - 1 + cells) % cells;
+        const rightIndex = (cell + 1) % cells;
+        const leftDiffusiveFlux = boundaryCondition === 'no-flux' && cell === 0
+          ? 0 : item.diffusionCoefficientM2PerS * (value - current[leftIndex]) / dx;
+        const rightDiffusiveFlux = boundaryCondition === 'no-flux' && cell === cells - 1
+          ? 0 : item.diffusionCoefficientM2PerS * (current[rightIndex] - value) / dx;
+        const leftAdvectiveFlux = boundaryCondition === 'no-flux' && cell === 0
+          ? 0
+          : velocity >= 0 ? velocity * current[leftIndex] : velocity * value;
+        const rightAdvectiveFlux = boundaryCondition === 'no-flux' && cell === cells - 1
+          ? 0
+          : velocity >= 0 ? velocity * value : velocity * current[rightIndex];
+        const diffusion = (rightDiffusiveFlux - leftDiffusiveFlux) / dx;
+        const advection = -(rightAdvectiveFlux - leftAdvectiveFlux) / dx;
+        return value + dt * (diffusion + advection);
       });
       next[item.id] = updated;
     }
-    // Reactions are evaluated from the same old-time state (explicit operator step).
+    // Reactions are evaluated from the same old-time state (explicit Euler source step).
     for (const reaction of reactions) {
       const source = values[reaction.reactantSpeciesId];
-      const extentRate = reaction.rateConstantPerS;
       for (let cell = 0; cell < cells; cell++) {
-        const extent = dt * extentRate * source[cell];
+        const extent = dt * reaction.rateConstantPerS * source[cell];
         next[reaction.reactantSpeciesId][cell] -= extent;
         for (const product of reaction.products) next[product.speciesId][cell] += product.coefficient * extent;
       }
@@ -124,6 +145,7 @@ export function simulateReactionDiffusion1D(input: ReactionDiffusion1DInput): Re
     timeStepSeconds: dt,
     steps,
     stabilityNumber,
+    boundaryCondition,
     concentrationsMolPerM3: Object.fromEntries(Object.entries(values).map(([id, row]) => [id, row])),
   };
 }
