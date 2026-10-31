@@ -1,8 +1,8 @@
 # Chemistry Lab — Artificial & Computational Chemistry Research Platform
 
-Chemistry Lab is an experimental platform for exploring artificial chemistry, reaction networks, stochastic chemical kinetics and emergent behaviour. It combines an interactive visual sandbox with a separately defined research kernel for well-mixed stochastic reaction systems.
+Chemistry Lab is an experimental platform for exploring artificial chemistry, reaction networks, stochastic and deterministic chemical kinetics, thermodynamic consistency, molecular identity and spatial reaction–transport systems. It combines a qualitative visual sandbox with a separately defined scientific research kernel and Advanced Analysis workspace.
 
-> **Scientific status:** This repository is an active research-software prototype. The visual particle sandbox is qualitative and is not a molecular-dynamics, quantum-chemistry or validated physical-chemistry solver. The research kernel implements a documented Gillespie direct-method model for explicitly specified reaction networks. Results are only as scientifically meaningful as the network, parameters, units and assumptions supplied by the researcher.
+> **Scientific status:** This repository is an active research-software prototype. The visual particle sandbox is qualitative and is not a molecular-dynamics, quantum-chemistry or validated physical-chemistry solver. The research layer includes a documented Gillespie direct-method model, nonlinear mass-action fitting, detailed-balance reversible kinetics, RDKit molecular identity, and 1-D/2-D finite-volume transport models. Each method has explicit numerical and scientific limitations. Results are only as meaningful as the network, data, parameters, units and assumptions supplied by the researcher.
 
 ## Current capabilities
 
@@ -11,7 +11,12 @@ Chemistry Lab is an experimental platform for exploring artificial chemistry, re
 - Rule-based artificial chemistry, reaction-diffusion and genetic-string experiments.
 - Custom reaction grammar and experiment presets.
 - Export/share utilities for experiment configurations.
-- **Research kernel foundation:** reaction-network data model, elemental and charge-balance validation, initial-population validation, deterministic seeded random-number generation, and a well-mixed continuous-time Gillespie stochastic simulation algorithm (SSA).
+- **Stochastic research kernel:** validated reaction-network data model, elemental and charge-balance checks, deterministic seeded random-number generation, and Gillespie SSA.
+- **Advanced kinetic analysis:** multi-species mass-action ODEs, bounded nonlinear parameter estimation, local identifiability diagnostics, covariance/correlation estimates and correlated uncertainty propagation.
+- **Thermodynamics:** standard Gibbs-energy calculations, detailed-balance-derived reverse rate constants, equilibrium quotient checks and reversible activity-space simulation.
+- **Cheminformatics:** official RDKit.js WASM integration for sanitized SMILES, canonical isomeric SMILES, InChI/InChIKey and stereo/valence-aware molecular identity.
+- **Spatial chemistry:** conservative 1-D and 2-D finite-volume diffusion and upwind transport with first-order reaction channels, no-flux/periodic boundaries and explicit stability checks.
+- **Independent benchmarks:** SciPy BDF/Radau ODE and method-of-lines references, the published Robertson stiff-kinetics problem, NIST Arrhenius reference values, and manufactured spatial-solution convergence tests.
 - Test and type-check scripts suitable for continuous integration.
 
 ## Research kernel: what it does
@@ -79,9 +84,9 @@ src/
 
 ## Scientific validation status and roadmap
 
-Implemented software-verification capabilities include analytical first-order and competing-channel benchmarks, an independent in-repository first-reaction SSA comparison, first-order parameter estimation, local sensitivity, seeded rate-uncertainty propagation, reaction standard-state thermodynamics and molecular atom/bond graph validation. See [advanced research methods and limitations](docs/RESEARCH_ROADMAP_AND_LIMITATIONS.md) and [analytical SSA benchmarks](docs/ANALYTICAL_SSA_BENCHMARKS.md).
+The current research layer has dedicated documentation and CI evidence for cheminformatics, nonlinear kinetic fitting, correlated parameter uncertainty, detailed balance, external references, and 1-D/2-D reaction–transport models. See the [scientific capability and validation matrix](docs/SCIENTIFIC_VALIDATION_STATUS.md), [RDKit integration](docs/RDKIT_CHEMINFORMATICS.md), [nonlinear kinetic fitting](docs/NONLINEAR_KINETIC_FITTING.md), [detailed-balance kinetics](docs/DETAILED_BALANCE_REVERSIBLE_KINETICS.md), [external benchmarks](docs/EXTERNAL_BENCHMARKS.md), [1-D spatial chemistry](docs/SPATIAL_REACTION_DIFFUSION.md), and [2-D spatial chemistry](docs/SPATIAL_REACTION_DIFFUSION_2D.md).
 
-Remaining validation work includes an external trusted SSA implementation comparison, published experimental datasets, realistic noisy parameter-recovery studies, reversible equilibrium benchmark systems, independent cheminformatics canonicalisation/valence checks, and domain-expert review. Passing automated tests is not scientific certification.
+Important remaining work includes a stiff ODE solver in the application fitting path, end-to-end fitting of a raw published experimental concentration-time dataset with uncertainty metadata, non-ideal thermodynamics, broader heterogeneous/3-D spatial validation, deployed-browser RDKit/CSP testing, and independent domain-expert review. Passing automated tests is not scientific certification.
 
 ## Reproducibility and reporting
 
