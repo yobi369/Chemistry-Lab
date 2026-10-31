@@ -136,7 +136,7 @@ export const ResearchLab: React.FC = () => {
         : '';
       setEquationFeedback({
         valid: true,
-        message: `Loaded ${candidate.reactions.length} balanced reaction channel(s). The same stochastic c is assigned to every channel; edit initial populations species by species below.${directionNote}`,
+        message: `Loaded ${candidate.reactions.length} balanced reaction channel(s). Each channel has its own editable stochastic c; edit initial populations species by species below.${directionNote}`,
       });
     } catch (cause) {
       setEquationFeedback({
