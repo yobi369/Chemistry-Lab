@@ -102,3 +102,8 @@ The optional equation balancer constructs an exact integer conservation matrix o
 ## Experiment import integrity
 
 The v2 import path validates the saved network and initial populations, requires per-channel rate parameterisation metadata, checks seed/duration/event-cap metadata, replays every recorded stoichiometric event from the initial state, verifies monotonic event times and non-negative populations, and compares each event snapshot and final state with the reconstructed trajectory. This is a data-integrity check, not a scientific-model validation or cryptographic authenticity guarantee.
+
+
+## Stoichiometric matrix and conservation laws
+
+For species \(i\) and reaction channel \(j\), the stoichiometric matrix is \(N_{ij}=\nu^{products}_{ij}-\nu^{reactants}_{ij}\). The implementation computes exact rank and the left nullspace of \(N\) using rational row reduction. Each left-nullspace vector \(l\) satisfies \(l^T N=0\) and therefore defines a linear invariant of the closed reaction network's species-count state. The right nullity reports the dimension of the reaction-channel cycle space. These are mathematical properties of the entered network, not proof that the network includes every species or exchange process in the real system.
