@@ -110,3 +110,15 @@ For species \(i\) and reaction channel \(j\), the stoichiometric matrix is \(N_{
 
 
 The v2 import validator also recomputes macroscopic-to-stochastic conversions and Arrhenius-derived macroscopic constants from their recorded inputs. It verifies that the resulting stochastic constant matches the saved reaction channel within a tight floating-point tolerance. This is an internal consistency check, not independent verification of the source experiment or reported physical units.
+
+
+## Extended analysis capabilities (subsequent research modules)
+
+The repository now also contains narrowly scoped first-order decay parameter estimation, local sensitivity, lognormal Monte Carlo uncertainty propagation, standard-state thermodynamic calculations and explicit molecular atom/bond graph validation. These capabilities are described in detail in [RESEARCH_ROADMAP_AND_LIMITATIONS.md](./RESEARCH_ROADMAP_AND_LIMITATIONS.md). The earlier limitations above describe the original kernel baseline; the newer functions do not turn the simulator into a general-purpose chemical kinetics, quantum chemistry or cheminformatics package.
+
+In particular:
+- Parameter estimation currently fits only positive first-order decay observations in log space. It is not a general multi-parameter mechanism fitter.
+- Uncertainty propagation currently covers a single positive first-order rate parameter and excludes observation noise/model discrepancy.
+- Molecular graph validation does not perform canonicalisation, valence perception, stereochemical assignment or tautomer standardisation.
+- Thermodynamic helpers calculate standard-state relationships and reaction driving force from user-supplied thermodynamic data and activities; they do not enforce detailed balance or infer reverse kinetic rates.
+- An independent in-repository first-reaction SSA implementation is used for statistical cross-checking. External implementation and published experimental benchmark campaigns remain future work.

@@ -17,12 +17,13 @@ export interface FirstOrderFit {
   readonly coefficientOfDetermination: number;
   readonly residualSumOfSquaresLogSpace: number;
   readonly observationsUsed: number;
+  readonly weightedLeastSquares: boolean;
   readonly fitted: readonly { timeSeconds: number; observed: number; predicted: number; residualLog: number }[];
 }
 
 /**
- * Fit y(t)=y0 exp(-k t) by ordinary least squares in log space.
- * This is a deliberately narrow estimator for positive first-order decay data;
+ * Fit y(t)=y0 exp(-k t) by least squares in log space (weighted when measurement SDs are supplied).
+ * When SDs are supplied, their relative log-space uncertainty is approximated by SD(y)/y. This is a deliberately narrow estimator for positive first-order decay data;
  * it is not a general nonlinear kinetic mechanism fitter.
  */
 export function fitFirstOrderDecay(observations: readonly KineticObservation[]): FirstOrderFit {
@@ -44,11 +45,19 @@ export function fitFirstOrderDecay(observations: readonly KineticObservation[]):
 
   const xs = observations.map(item => item.timeSeconds);
   const ys = observations.map(item => Math.log(item.value));
-  const xMean = xs.reduce((sum, x) => sum + x, 0) / xs.length;
-  const yMean = ys.reduce((sum, y) => sum + y, 0) / ys.length;
-  const sxx = xs.reduce((sum, x) => sum + (x - xMean) ** 2, 0);
+  const hasUncertainty = observations.some(item => item.standardDeviation !== undefined);
+  if (hasUncertainty && observations.some(item => item.standardDeviation === undefined)) {
+    throw new SimulationInputError('Provide standard deviations for every observation or omit them for all observations.');
+  }
+  // For small relative errors, SD(log y) is approximated by SD(y)/y.
+  const weights = observations.map(item => hasUncertainty
+    ? 1 / ((item.standardDeviation! / item.value) ** 2) : 1);
+  const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
+  const xMean = xs.reduce((sum, x, i) => sum + weights[i] * x, 0) / weightSum;
+  const yMean = ys.reduce((sum, y, i) => sum + weights[i] * y, 0) / weightSum;
+  const sxx = xs.reduce((sum, x, i) => sum + weights[i] * (x - xMean) ** 2, 0);
   if (!(sxx > 0)) throw new SimulationInputError('Observation times do not contain enough variation.');
-  const slope = xs.reduce((sum, x, i) => sum + (x - xMean) * (ys[i] - yMean), 0) / sxx;
+  const slope = xs.reduce((sum, x, i) => sum + weights[i] * (x - xMean) * (ys[i] - yMean), 0) / sxx;
   const intercept = yMean - slope * xMean;
   const rate = -slope;
   if (!Number.isFinite(rate) || rate < 0) {
@@ -56,9 +65,11 @@ export function fitFirstOrderDecay(observations: readonly KineticObservation[]):
   }
 
   const residuals = ys.map((y, i) => y - (intercept + slope * xs[i]));
-  const rss = residuals.reduce((sum, residual) => sum + residual ** 2, 0);
+  const rss = residuals.reduce((sum, residual, i) => sum + weights[i] * residual ** 2, 0);
   const residualVariance = rss / (observations.length - 2);
-  const standardError = Math.sqrt(residualVariance / sxx);
+  // Known log-space measurement variances set the covariance scale directly;
+  // otherwise estimate residual variance from the unweighted regression.
+  const standardError = Math.sqrt((hasUncertainty ? 1 : residualVariance) / sxx);
   const total = ys.reduce((sum, y) => sum + (y - yMean) ** 2, 0);
   const rSquared = total === 0 ? (rss === 0 ? 1 : 0) : 1 - rss / total;
   const fitted = observations.map((item, i) => ({
@@ -79,6 +90,7 @@ export function fitFirstOrderDecay(observations: readonly KineticObservation[]):
     coefficientOfDetermination: rSquared,
     residualSumOfSquaresLogSpace: rss,
     observationsUsed: observations.length,
+    weightedLeastSquares: hasUncertainty,
     fitted,
   };
 }
