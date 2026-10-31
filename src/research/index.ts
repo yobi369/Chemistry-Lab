@@ -9,3 +9,7 @@ export * from './rateConversion';
 export * from './arrhenius';
 export * from './balanceEquation';
 export * from './stoichiometry';
+export * from './parameterEstimation';
+export * from './sensitivity';
+export * from './thermodynamics';
+export * from './molecularIdentity';
