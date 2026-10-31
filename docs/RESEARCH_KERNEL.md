@@ -97,3 +97,8 @@ The equation parser supports explicit caret charge suffixes, including `Fe^3+`, 
 ## Automatic equation balancing
 
 The optional equation balancer constructs an exact integer conservation matrix over all elements and, when present, formal charge. It uses rational reduced row-echelon form and converts a positive nullspace vector to primitive integer coefficients. For nullity greater than one, the current implementation searches positive free-variable assignments from 1 through 12 (up to four free variables) and selects the smallest coefficient sum encountered. This is a bounded search, not a general integer-programming proof of globally minimal coefficients for every underdetermined system. Equations with species on both sides must be simplified first. Always review the returned equation and confirm species identities.
+
+
+## Experiment import integrity
+
+The v2 import path validates the saved network and initial populations, requires per-channel rate parameterisation metadata, checks seed/duration/event-cap metadata, replays every recorded stoichiometric event from the initial state, verifies monotonic event times and non-negative populations, and compares each event snapshot and final state with the reconstructed trajectory. This is a data-integrity check, not a scientific-model validation or cryptographic authenticity guarantee.
