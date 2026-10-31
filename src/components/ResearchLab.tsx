@@ -256,15 +256,11 @@ export const ResearchLab: React.FC = () => {
       }
       const seconds = Number(duration);
       const randomSeed = Number(seed);
-      const rateConstant = Number(rate);
       if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 1_000_000) {
         throw new Error('Duration must be greater than zero and no more than 1,000,000 seconds.');
       }
       if (!Number.isSafeInteger(randomSeed) || randomSeed < 0 || randomSeed > 4_294_967_295) {
         throw new Error('Seed must be an integer between 0 and 4,294,967,295.');
-      }
-      if (!Number.isFinite(rateConstant) || rateConstant < 0) {
-        throw new Error('Stochastic rate constant must be finite and non-negative.');
       }
       if (validationIssues.length) {
         throw new Error(validationIssues.map((issue) => issue.message).join(' '));
