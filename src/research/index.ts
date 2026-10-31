@@ -18,3 +18,4 @@ export * from './rdkitToolkit';
 export * from './detailedBalance';
 export * from './nonlinearKineticFitting';
 export * from './reactionDiffusion1D';
+export * from './reactionDiffusion2D';
