@@ -2,13 +2,14 @@ import React, { useMemo, useState } from 'react';
 import {
   equationToNetwork,
   parseReactionEquation,
+  simulateEnsemble,
   simulateGillespie,
   validateNetwork,
   createExperimentRecord,
   serializeExperiment,
   simulationEventsToCsv,
 } from '../research';
-import type { ReactionNetwork, SimulationResult, SpeciesCounts } from '../research';
+import type { EnsembleResult, ReactionNetwork, SimulationResult, SpeciesCounts } from '../research';
 
 const DISSOCIATION_NETWORK: ReactionNetwork = {
   species: [
@@ -58,6 +59,8 @@ export const ResearchLab: React.FC = () => {
   const [duration, setDuration] = useState('10');
   const [rate, setRate] = useState('0.08');
   const [seed, setSeed] = useState('42');
+  const [replicates, setReplicates] = useState('200');
+  const [ensembleResult, setEnsembleResult] = useState<EnsembleResult | null>(null);
   const [equationInput, setEquationInput] = useState('2 H2 + O2 -> 2 H2O');
   const [equationFeedback, setEquationFeedback] = useState<{ valid: boolean; message: string } | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
@@ -96,6 +99,7 @@ export const ResearchLab: React.FC = () => {
       setActiveNetwork(candidate);
       setActiveEquation(parsed.source);
       setResult(null);
+      setEnsembleResult(null);
       const directionNote = parsed.arrow === 'reversible'
         ? ' The reversible arrow is retained as metadata; this simulator currently runs only the written forward direction.'
         : '';
@@ -111,9 +115,43 @@ export const ResearchLab: React.FC = () => {
     }
   };
 
+  const runEnsemble = () => {
+    setError(null);
+    setEnsembleResult(null);
+    try {
+      if (!Number.isSafeInteger(population) || population < 0) {
+        throw new Error('Initial population per reactant coefficient must be a non-negative integer.');
+      }
+      const seconds = Number(duration);
+      const randomSeed = Number(seed);
+      const replicateCount = Number(replicates);
+      if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 1_000_000) {
+        throw new Error('Duration must be greater than zero and no more than 1,000,000 seconds.');
+      }
+      if (!Number.isSafeInteger(randomSeed) || randomSeed < 0 || randomSeed > 4_294_967_295) {
+        throw new Error('Seed must be an integer between 0 and 4,294,967,295.');
+      }
+      if (!Number.isSafeInteger(replicateCount) || replicateCount < 2 || replicateCount > 1000) {
+        throw new Error('Ensemble size must be an integer between 2 and 1,000.');
+      }
+      if (validationIssues.length) {
+        throw new Error(validationIssues.map((issue) => issue.message).join(' '));
+      }
+      setEnsembleResult(simulateEnsemble(network, initialCounts, {
+        durationSeconds: seconds,
+        seed: randomSeed,
+        replicates: replicateCount,
+        maxEvents: 100_000,
+      }));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Ensemble could not be completed.');
+    }
+  };
+
   const run = () => {
     setError(null);
     setResult(null);
+    setEnsembleResult(null);
     try {
       if (!Number.isSafeInteger(population) || population < 0) {
         throw new Error('Initial population per reactant coefficient must be a non-negative integer.');
@@ -218,6 +256,11 @@ export const ResearchLab: React.FC = () => {
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
             <label className="block">
+              <span className="text-xs text-zinc-400">Ensemble replicates (2–1,000)</span>
+              <input type="number" min="2" max="1000" step="1" value={replicates} onChange={e => setReplicates(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
+            </label>
+            <label className="block">
               <span className="text-xs text-zinc-400">Random seed (uint32)</span>
               <input type="number" min="0" max="4294967295" step="1" value={seed} onChange={e => setSeed(e.target.value)}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-cyan-500" />
@@ -225,6 +268,10 @@ export const ResearchLab: React.FC = () => {
             <button onClick={run} disabled={validationIssues.length > 0}
               className="w-full rounded-lg bg-cyan-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-40">
               Run stochastic experiment
+            </button>
+            <button onClick={runEnsemble} disabled={validationIssues.length > 0}
+              className="w-full rounded-lg border border-cyan-700 bg-cyan-950/50 px-4 py-3 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-900/60 disabled:cursor-not-allowed disabled:opacity-40">
+              Run stochastic ensemble
             </button>
             {error && <p role="alert" className="rounded-lg border border-rose-900 bg-rose-950/40 p-3 text-sm text-rose-300">{error}</p>}
           </div>
@@ -307,6 +354,33 @@ export const ResearchLab: React.FC = () => {
             )}
           </div>
 
+          {ensembleResult && (
+            <div className="rounded-2xl border border-cyan-900/60 bg-zinc-950/90 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">Ensemble statistics</h3>
+                <span className="font-mono text-[10px] text-cyan-300">{ensembleResult.replicateCount} REPLICATES · BASE SEED {ensembleResult.baseSeed}</span>
+              </div>
+              <p className="mt-1 text-[11px] text-zinc-500">Final population mean, sample standard deviation and normal-approximation 95% confidence interval for the mean.</p>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[420px] text-left text-xs">
+                  <thead className="text-zinc-500">
+                    <tr><th className="py-2 pr-3 font-medium">Species</th><th className="py-2 pr-3 font-medium">Mean</th><th className="py-2 pr-3 font-medium">SD</th><th className="py-2 font-medium">95% CI of mean</th></tr>
+                  </thead>
+                  <tbody>
+                    {ensembleResult.species.map(item => {
+                      const label = network.species.find(species => species.id === item.speciesId)?.label ?? item.speciesId;
+                      return <tr key={item.speciesId} className="border-t border-zinc-800">
+                        <td className="py-2 pr-3 text-zinc-300">{label}</td>
+                        <td className="py-2 pr-3 font-mono text-cyan-200">{format(item.mean, 3)}</td>
+                        <td className="py-2 pr-3 font-mono text-zinc-400">{format(item.standardDeviation, 3)}</td>
+                        <td className="py-2 font-mono text-zinc-400">[{format(item.confidenceInterval95[0], 3)}, {format(item.confidenceInterval95[1], 3)}]</td>
+                      </tr>;
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
           {result && (
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5">
               <h3 className="text-sm font-semibold">Recent reaction events</h3>
