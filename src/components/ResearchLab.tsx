@@ -11,7 +11,7 @@ import {
   serializeExperiment,
   simulationEventsToCsv,
 } from '../research';
-import type { EnsembleResult, RateParameterisation, ReactionNetwork, SimulationResult, SpeciesCounts } from '../research';
+import type { EnsembleResult, RateParameterisation, ReactionRateParameterisation, ReactionNetwork, SimulationResult, SpeciesCounts } from '../research';
 
 const DISSOCIATION_NETWORK: ReactionNetwork = {
   species: [
@@ -66,9 +66,10 @@ export const ResearchLab: React.FC = () => {
   const [activeEquation, setActiveEquation] = useState('H₂ → 2 H');
   const [initialPopulationValues, setInitialPopulationValues] = useState<Record<string, string>>(() => createDefaultInitialCounts(DISSOCIATION_NETWORK));
   const [duration, setDuration] = useState('10');
-  const [rate, setRate] = useState('0.08');
-  const [rateParameterisation, setRateParameterisation] = useState<RateParameterisation>({ kind: 'illustrative_default', stochasticRateConstant: 0.08 });
-  const [pendingArrhenius, setPendingArrhenius] = useState<{ preExponentialFactor: number; activationEnergyJPerMol: number; temperatureKelvin: number; macroscopicRateConstant: number } | null>(null);
+  const [rateValues, setRateValues] = useState<Record<string, string>>({ dissociation: '0.08' });
+  const [rateParameterisations, setRateParameterisations] = useState<Record<string, RateParameterisation>>({ dissociation: { kind: 'illustrative_default', stochasticRateConstant: 0.08 } });
+  const [selectedReactionId, setSelectedReactionId] = useState('dissociation');
+  const [pendingArrhenius, setPendingArrhenius] = useState<{ reactionId: string; preExponentialFactor: number; activationEnergyJPerMol: number; temperatureKelvin: number; macroscopicRateConstant: number } | null>(null);
   const [macroscopicRate, setMacroscopicRate] = useState('1');
   const [preExponential, setPreExponential] = useState('1e7');
   const [activationEnergy, setActivationEnergy] = useState('50000');
@@ -88,11 +89,13 @@ export const ResearchLab: React.FC = () => {
     ...activeNetwork,
     reactions: activeNetwork.reactions.map((reaction) => ({
       ...reaction,
-      stochasticRateConstant: Number(rate),
+      stochasticRateConstant: Number(rateValues[reaction.id] ?? String(reaction.stochasticRateConstant)),
     })),
-  }), [activeNetwork, rate]);
+  }), [activeNetwork, rateValues]);
 
   const validationIssues = useMemo(() => validateNetwork(network), [network]);
+  const selectedReaction = network.reactions.find((reaction) => reaction.id === selectedReactionId) ?? network.reactions[0];
+  const selectedReactionOrder = selectedReaction?.reactants.reduce((sum, term) => sum + term.coefficient, 0) ?? 1;
   const initialCounts = useMemo(
     () => parseInitialCounts(network, initialPopulationValues),
     [network, initialPopulationValues],
@@ -109,7 +112,7 @@ export const ResearchLab: React.FC = () => {
     setEquationFeedback(null);
     setError(null);
     try {
-      const parsed = parseReactionNetwork(equationInput, Number(rate));
+      const parsed = parseReactionNetwork(equationInput, 0.08);
       const candidate = parsed.network;
       const issues = validateNetwork(candidate);
       if (issues.length) {
@@ -120,8 +123,9 @@ export const ResearchLab: React.FC = () => {
       setActiveNetwork(candidate);
       setActiveEquation(parsed.equations.map((equation) => equation.source).join('\\n'));
       setInitialPopulationValues(createDefaultInitialCounts(candidate));
-      setRate('0.08');
-      setRateParameterisation({ kind: 'illustrative_default', stochasticRateConstant: 0.08 });
+      setRateValues(Object.fromEntries(candidate.reactions.map((reaction) => [reaction.id, '0.08'])));
+      setRateParameterisations(Object.fromEntries(candidate.reactions.map((reaction) => [reaction.id, { kind: 'illustrative_default' as const, stochasticRateConstant: 0.08 }])));
+      setSelectedReactionId(candidate.reactions[0]?.id ?? '');
       setPendingArrhenius(null);
       setConversionFeedback(null);
       setResult(null);
@@ -132,7 +136,7 @@ export const ResearchLab: React.FC = () => {
         : '';
       setEquationFeedback({
         valid: true,
-        message: `Loaded ${candidate.reactions.length} balanced reaction channel(s). The same stochastic c is assigned to every channel; edit initial populations species by species below.${directionNote}`,
+        message: `Loaded ${candidate.reactions.length} balanced reaction channel(s). Each channel has its own editable stochastic c; edit initial populations species by species below.${directionNote}`,
       });
     } catch (cause) {
       setEquationFeedback({
@@ -151,7 +155,9 @@ export const ResearchLab: React.FC = () => {
         Number(temperatureKelvin),
       );
       setMacroscopicRate(String(calculated.rateConstant));
+      if (!selectedReaction) throw new Error('Load a reaction before calculating its rate.');
       setPendingArrhenius({
+        reactionId: selectedReaction.id,
         preExponentialFactor: calculated.preExponentialFactor,
         activationEnergyJPerMol: calculated.activationEnergyJPerMol,
         temperatureKelvin: calculated.temperatureKelvin,
@@ -168,16 +174,14 @@ export const ResearchLab: React.FC = () => {
   const convertRateConstant = () => {
     setConversionFeedback(null);
     try {
-      if (network.reactions.length !== 1) {
-        throw new Error('The current converter requires exactly one reaction channel.');
-      }
+      if (!selectedReaction) throw new Error('Select a reaction channel before converting its rate.');
       const converted = convertMacroscopicRateConstant(
-        network.reactions[0],
+        selectedReaction,
         Number(macroscopicRate),
         Number(volumeLiters),
       );
-      setRate(String(converted.stochasticRateConstant));
-      const pending = pendingArrhenius && pendingArrhenius.macroscopicRateConstant === Number(macroscopicRate)
+      setRateValues(current => ({ ...current, [selectedReaction.id]: String(converted.stochasticRateConstant) }));
+      const pending = pendingArrhenius && pendingArrhenius.reactionId === selectedReaction.id && pendingArrhenius.macroscopicRateConstant === Number(macroscopicRate)
         ? pendingArrhenius
         : null;
       const parameterisation: RateParameterisation = pending
@@ -197,7 +201,7 @@ export const ResearchLab: React.FC = () => {
             macroscopicUnits: converted.macroscopicUnits,
             stochasticRateConstant: converted.stochasticRateConstant,
           };
-      setRateParameterisation(parameterisation);
+      setRateParameterisations(current => ({ ...current, [selectedReaction.id]: parameterisation }));
       setPendingArrhenius(null);
       setResult(null);
       setEnsembleResult(null);
@@ -252,15 +256,11 @@ export const ResearchLab: React.FC = () => {
       }
       const seconds = Number(duration);
       const randomSeed = Number(seed);
-      const rateConstant = Number(rate);
       if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 1_000_000) {
         throw new Error('Duration must be greater than zero and no more than 1,000,000 seconds.');
       }
       if (!Number.isSafeInteger(randomSeed) || randomSeed < 0 || randomSeed > 4_294_967_295) {
         throw new Error('Seed must be an integer between 0 and 4,294,967,295.');
-      }
-      if (!Number.isFinite(rateConstant) || rateConstant < 0) {
-        throw new Error('Stochastic rate constant must be finite and non-negative.');
       }
       if (validationIssues.length) {
         throw new Error(validationIssues.map((issue) => issue.message).join(' '));
@@ -356,11 +356,24 @@ export const ResearchLab: React.FC = () => {
               <input type="number" min="0.001" step="0.1" value={duration} onChange={e => { setDuration(e.target.value); setResult(null); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
-            <label className="block">
-              <span className="text-xs text-zinc-400">Stochastic rate constant c (s⁻¹ per available reactant combination)</span>
-              <input type="number" min="0" step="0.01" value={rate} onChange={e => { setRate(e.target.value); setRateParameterisation({ kind: 'direct_stochastic', stochasticRateConstant: Number(e.target.value) }); setPendingArrhenius(null); setResult(null); setEnsembleResult(null); }}
-                className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
-            </label>
+            <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
+              <p className="text-xs font-semibold text-zinc-300">Per-channel stochastic rate constants</p>
+              <p className="mt-1 text-[11px] leading-5 text-zinc-500">Every reaction channel has its own c. Values use s⁻¹ per available reactant combination.</p>
+              <div className="mt-3 space-y-2">
+                {network.reactions.map(reaction => (
+                  <label key={reaction.id} className="block">
+                    <span className="block text-[11px] text-zinc-400">{reaction.label}</span>
+                    <input type="number" min="0" step="any" value={rateValues[reaction.id] ?? '0.08'}
+                      onChange={e => {
+                        setRateValues(current => ({ ...current, [reaction.id]: e.target.value }));
+                        setRateParameterisations(current => ({ ...current, [reaction.id]: { kind: 'direct_stochastic', stochasticRateConstant: Number(e.target.value) } }));
+                        setPendingArrhenius(null); setResult(null); setEnsembleResult(null);
+                      }}
+                      className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs outline-none focus:border-cyan-500" />
+                  </label>
+                ))}
+              </div>
+            </div>
             <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
               <p className="text-xs font-semibold text-zinc-300">Arrhenius temperature model</p>
               <p className="mt-1 text-[11px] leading-5 text-zinc-500">Calculate k(T) = A exp(−Ea/RT). A carries the same units as k for the selected reaction order.</p>
@@ -388,10 +401,18 @@ export const ResearchLab: React.FC = () => {
 
             <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
               <p className="text-xs font-semibold text-zinc-300">Macroscopic kinetic constant converter</p>
+              <label className="mt-2 block">
+                <span className="text-[11px] text-zinc-400">Reaction channel to parameterise</span>
+                <select value={selectedReactionId} onChange={e => { setSelectedReactionId(e.target.value); setPendingArrhenius(null); setArrheniusFeedback(null); setConversionFeedback(null); }}
+                  className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs outline-none focus:border-cyan-500">
+                  {network.reactions.map(reaction => <option key={reaction.id} value={reaction.id}>{reaction.id}: {reaction.label}</option>)}
+                </select>
+              </label>
+
               <p className="mt-1 text-[11px] leading-5 text-zinc-500">Convert k from concentration-based mass-action units to the SSA stochastic constant using reaction order and volume.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <label className="block">
-                  <span className="text-[11px] text-zinc-400">Macroscopic k ({activeNetwork.reactions[0]?.reactants.reduce((sum, term) => sum + term.coefficient, 0) === 1 ? 's⁻¹' : `M⁻${Math.max(1, (activeNetwork.reactions[0]?.reactants.reduce((sum, term) => sum + term.coefficient, 0) ?? 1) - 1)} s⁻¹`})</span>
+                  <span className="text-[11px] text-zinc-400">Macroscopic k ({selectedReactionOrder === 1 ? 's⁻¹' : `M⁻${Math.max(1, selectedReactionOrder - 1)} s⁻¹`})</span>
                   <input type="number" min="0" step="any" value={macroscopicRate} onChange={e => { setMacroscopicRate(e.target.value); setPendingArrhenius(null); }}
                     className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs outline-none focus:border-cyan-500" />
                 </label>
@@ -401,7 +422,7 @@ export const ResearchLab: React.FC = () => {
                     className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs outline-none focus:border-cyan-500" />
                 </label>
               </div>
-              <button onClick={convertRateConstant} disabled={network.reactions.length !== 1} className="mt-3 w-full rounded-lg border border-cyan-800 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-900/50 disabled:cursor-not-allowed disabled:opacity-40">{network.reactions.length === 1 ? 'Convert and apply stochastic c' : 'Rate conversion requires one reaction channel'}</button>
+              <button onClick={convertRateConstant} disabled={!selectedReaction} className="mt-3 w-full rounded-lg border border-cyan-800 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-900/50 disabled:cursor-not-allowed disabled:opacity-40">Convert and apply c to selected channel</button>
               {conversionFeedback && <p role="status" className="mt-2 break-words text-[11px] leading-5 text-cyan-200">{conversionFeedback}</p>}
               <p className="mt-2 text-[10px] leading-4 text-zinc-600">Assumes an elementary mass-action step, ideal well-mixed solution, constant volume and the standard large-population rate-law convention. Finite-population stochastic trajectories may differ from deterministic concentration equations.</p>
             </div>
@@ -483,7 +504,10 @@ export const ResearchLab: React.FC = () => {
                       durationSeconds: Number(duration),
                       seed: Number(seed),
                       maxEvents: 100_000,
-                    }, result, undefined, rateParameterisation);
+                    }, result, undefined, network.reactions.map((reaction): ReactionRateParameterisation => ({
+                      reactionId: reaction.id,
+                      ...(rateParameterisations[reaction.id] ?? { kind: 'direct_stochastic', stochasticRateConstant: reaction.stochasticRateConstant }),
+                    })));
                     downloadTextFile(`chemistry-lab-experiment-${Date.now()}.json`, serializeExperiment(record), 'application/json');
                   }} className="rounded-lg border border-cyan-800 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-900/50">
                     Export reproducibility record (.json)

@@ -82,3 +82,8 @@ The helper evaluates \(k(T)=A\exp(-E_a/(RT))\), with \(E_a\) in J mol⁻¹, \(T\
 ## Rate parameter provenance
 
 The versioned experiment record stores whether the stochastic constant was supplied directly, left at the illustrative preset, converted from a macroscopic rate constant, or derived from an Arrhenius parameterisation and then converted. Conversion records retain the macroscopic k, reaction order, expected units, volume and final stochastic c; Arrhenius records additionally retain A, Ea and T. This records the user's parameter pathway but does not independently verify the provenance or validity of the supplied experimental values.
+
+
+## Per-channel kinetic parameters
+
+Every reaction channel carries its own stochastic rate constant. The Research Lab allows direct per-channel entry and selects one channel at a time for macroscopic or Arrhenius-based conversion. Experiment record schema v2 stores an array of rate-parameterisation records keyed by reaction id, preventing one channel's conversion history from being mistaken for another's. A shared rate value should only be used where the model justifies it.

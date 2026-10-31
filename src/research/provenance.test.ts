@@ -21,17 +21,17 @@ test('experiment provenance exports', async (t) => {
   const initialCounts = { A: 10, B: 0 };
   const options = { durationSeconds: 2, seed: 17, maxEvents: 100 };
   const result = simulateGillespie(model, initialCounts, options);
-  const record = createExperimentRecord(model, initialCounts, options, result, '2026-01-01T00:00:00.000Z', {
-    kind: 'macroscopic_conversion', macroscopicRateConstant: 1, volumeLiters: 0.001,
+  const record = createExperimentRecord(model, initialCounts, options, result, '2026-01-01T00:00:00.000Z', [{
+    reactionId: 'r1', kind: 'macroscopic_conversion', macroscopicRateConstant: 1, volumeLiters: 0.001,
     reactionOrder: 1, macroscopicUnits: 's^-1', stochasticRateConstant: 1,
-  });
+  }]);
 
   await t.test('stores model, assumptions, seed and trajectory', () => {
     const parsed = JSON.parse(serializeExperiment(record));
-    assert.equal(parsed.schemaVersion, 'chemistry-lab-experiment/v1');
+    assert.equal(parsed.schemaVersion, 'chemistry-lab-experiment/v2');
     assert.equal(parsed.simulation.seed, 17);
-    assert.equal(parsed.rateParameterisation.kind, 'macroscopic_conversion');
-    assert.equal(parsed.rateParameterisation.volumeLiters, 0.001);
+    assert.equal(parsed.rateParameterisations[0].kind, 'macroscopic_conversion');
+    assert.equal(parsed.rateParameterisations[0].volumeLiters, 0.001);
     assert.equal(parsed.result.events.length, result.events.length);
     assert.equal(parsed.model.reactions[0].label, 'A → B, first order');
     assert.ok(parsed.assumptions.length > 0);
