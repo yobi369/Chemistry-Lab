@@ -1,7 +1,8 @@
 import initRDKit from '@rdkit/rdkit';
 
 const RDKit = await initRDKit();
-if (!String(RDKit.version()).startsWith('2026.9.1')) {
+const normalizedVersion = String(RDKit.version()).split('.').map(part => String(Number(part))).join('.');
+if (normalizedVersion !== '2026.9.1') {
   throw new Error(`Expected RDKit 2026.9.1, received ${RDKit.version()}`);
 }
 
