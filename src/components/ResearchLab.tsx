@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { simulateGillespie, validateNetwork } from '../research';
+import { equationToNetwork, parseReactionEquation, simulateGillespie, validateNetwork } from '../research';
 import type { ReactionNetwork, SimulationResult } from '../research';
 
 const DISSOCIATION_NETWORK: ReactionNetwork = {
@@ -27,6 +27,8 @@ export const ResearchLab: React.FC = () => {
   const [duration, setDuration] = useState('10');
   const [rate, setRate] = useState('0.08');
   const [seed, setSeed] = useState('42');
+  const [equationInput, setEquationInput] = useState('2 H2 + O2 -> 2 H2O');
+  const [equationFeedback, setEquationFeedback] = useState<{ valid: boolean; message: string } | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +41,23 @@ export const ResearchLab: React.FC = () => {
   }), [rate]);
 
   const validationIssues = useMemo(() => validateNetwork(network), [network]);
+
+  const validateEquation = () => {
+    try {
+      const parsed = parseReactionEquation(equationInput);
+      const issues = validateNetwork(equationToNetwork(parsed, 1));
+      if (issues.length) {
+        setEquationFeedback({ valid: false, message: issues.map(issue => issue.message).join(' ') });
+      } else {
+        setEquationFeedback({
+          valid: true,
+          message: `Balanced neutral equation: ${parsed.reactants.map(term => `${term.coefficient > 1 ? term.coefficient : ''}${term.formula}`).join(' + ')} ${parsed.arrow === 'reversible' ? '⇌' : '→'} ${parsed.products.map(term => `${term.coefficient > 1 ? term.coefficient : ''}${term.formula}`).join(' + ')}`,
+        });
+      }
+    } catch (cause) {
+      setEquationFeedback({ valid: false, message: cause instanceof Error ? cause.message : 'Could not parse equation.' });
+    }
+  };
 
   const run = () => {
     setError(null);
@@ -91,6 +110,28 @@ export const ResearchLab: React.FC = () => {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-base font-semibold">Chemical equation parser & balance checker</h3>
+            <p className="mt-1 text-xs text-zinc-500">Enter a neutral formula equation. Nested groups and hydrate notation are expanded before atom and formal-charge checks.</p>
+          </div>
+          <span className="font-mono text-[10px] text-cyan-300">FORMULA VALIDATION</span>
+        </div>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input value={equationInput} onChange={e => { setEquationInput(e.target.value); setEquationFeedback(null); }}
+            aria-label="Chemical reaction equation" placeholder="2 H2 + O2 -> 2 H2O"
+            className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-cyan-500" />
+          <button onClick={validateEquation} className="rounded-lg border border-cyan-700 bg-cyan-950/60 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-900/70">Parse & check balance</button>
+        </div>
+        {equationFeedback && (
+          <p role="status" className={`mt-3 rounded-lg border p-3 text-xs leading-5 ${equationFeedback.valid ? 'border-emerald-900 bg-emerald-950/30 text-emerald-200' : 'border-rose-900 bg-rose-950/30 text-rose-200'}`}>
+            {equationFeedback.valid ? '✓ ' : 'Check required: '}{equationFeedback.message}
+          </p>
+        )}
+        <p className="mt-2 text-[11px] leading-5 text-zinc-600">Supported: element symbols, integer coefficients, nested () and [] groups, hydrate separators (· or .), and forward/reversible arrows. Ionic charge notation and phase labels are not yet parsed; formulas are treated as neutral formula units.</p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
