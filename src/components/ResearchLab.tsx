@@ -4,6 +4,9 @@ import {
   parseReactionEquation,
   simulateGillespie,
   validateNetwork,
+  createExperimentRecord,
+  serializeExperiment,
+  simulationEventsToCsv,
 } from '../research';
 import type { ReactionNetwork, SimulationResult, SpeciesCounts } from '../research';
 
@@ -34,6 +37,18 @@ function createInitialCounts(network: ReactionNetwork, populationPerCoefficient:
     }
   }
   return counts;
+}
+
+function downloadTextFile(filename: string, content: string, mimeType: string): void {
+  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export const ResearchLab: React.FC = () => {
@@ -264,6 +279,25 @@ export const ResearchLab: React.FC = () => {
                       </div>
                     );
                   })}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-zinc-800 pt-4">
+                  <button onClick={() => {
+                    const record = createExperimentRecord(network, initialCounts, {
+                      durationSeconds: Number(duration),
+                      seed: Number(seed),
+                      maxEvents: 100_000,
+                    }, result);
+                    downloadTextFile(`chemistry-lab-experiment-${Date.now()}.json`, serializeExperiment(record), 'application/json');
+                  }} className="rounded-lg border border-cyan-800 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-900/50">
+                    Export reproducibility record (.json)
+                  </button>
+                  <button onClick={() => downloadTextFile(
+                    `chemistry-lab-events-${Date.now()}.csv`,
+                    simulationEventsToCsv(result, network),
+                    'text/csv',
+                  )} className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800">
+                    Export event data (.csv)
+                  </button>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
                   <span className="rounded-md border border-zinc-700 px-2 py-1 text-zinc-400">Termination: {result.terminatedBy.replaceAll('_', ' ')}</span>
