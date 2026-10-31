@@ -21,10 +21,10 @@ test('experiment provenance exports', async (t) => {
   const initialCounts = { A: 10, B: 0 };
   const options = { durationSeconds: 2, seed: 17, maxEvents: 100 };
   const result = simulateGillespie(model, initialCounts, options);
-  const record = createExperimentRecord(model, initialCounts, options, result, '2026-01-01T00:00:00.000Z', {
+  const record = createExperimentRecord(model, initialCounts, options, result, '2026-01-01T00:00:00.000Z', [{
     reactionId: 'r1', kind: 'macroscopic_conversion', macroscopicRateConstant: 1, volumeLiters: 0.001,
     reactionOrder: 1, macroscopicUnits: 's^-1', stochasticRateConstant: 1,
-  });
+  }]);
 
   await t.test('stores model, assumptions, seed and trajectory', () => {
     const parsed = JSON.parse(serializeExperiment(record));
