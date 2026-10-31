@@ -136,3 +136,8 @@ A rate-conversion utility maps macroscopic mass-action constants to the kernel's
 ## Multi-step reaction networks
 
 The Research Lab accepts one neutral reaction equation per line. The parser builds a shared species registry and independent reaction channels, then validates every channel for elemental and formal-charge balance. The UI assigns the same stochastic rate constant to each parsed channel for now; initial populations are configured explicitly per species. Reversible arrows are recognized as metadata, but only the written forward direction is simulated. The macroscopic-rate converter is limited to single-channel networks until per-channel kinetic parameters are supported.
+
+
+## Temperature-dependent kinetics
+
+The Research Lab includes an Arrhenius calculator for k(T) = A exp(−Ea/RT). Users provide a pre-exponential factor, activation energy in J/mol and temperature in kelvin. The pre-exponential factor carries the same units as the macroscopic rate constant for the selected reaction order. The calculated k(T) can be passed into the volume-aware macroscopic-to-stochastic conversion. This does not infer a mechanism, activation pathway or physically justified Arrhenius parameters.

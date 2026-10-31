@@ -72,3 +72,8 @@ where \(m=\sum_i\nu_i\), \(V\) is in litres, and \(k\) uses \(M^{1-m}s^{-1}\) (o
 ## Multi-channel networks
 
 A network text input may contain multiple neutral reaction equations, one per line. Each equation is validated independently and species with the same formula identifier are shared between channels. This parser treats formula units as neutral and cannot distinguish structural isomers with identical elemental formulae; a future structure-aware species identifier is required for that. The current UI applies one shared stochastic constant to every parsed channel, which is a convenience for exploratory models, not a scientifically general parameterisation. Researchers should not use a shared value unless justified by their model. Reversible arrow syntax is retained in parse metadata but the network converter emits only the written forward channel until a separate reverse rate is specified.
+
+
+## Arrhenius parameterisation
+
+The helper evaluates \(k(T)=A\exp(-E_a/(RT))\), with \(E_a\) in J mol⁻¹, \(T\) in K and \(R=8.31446261815324\) J mol⁻¹ K⁻¹. The pre-exponential factor \(A\) must carry the same dimensional units as the resulting macroscopic rate constant. This computes a user-specified empirical parameterisation; it does not infer activation energies, transition states, mechanisms, solvent effects or temperature-dependent activities.

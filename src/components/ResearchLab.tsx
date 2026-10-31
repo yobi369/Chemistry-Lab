@@ -4,6 +4,7 @@ import {
   simulateEnsemble,
   simulateGillespie,
   convertMacroscopicRateConstant,
+  calculateArrheniusRate,
   validateNetwork,
   validateInitialCounts,
   createExperimentRecord,
@@ -67,6 +68,10 @@ export const ResearchLab: React.FC = () => {
   const [duration, setDuration] = useState('10');
   const [rate, setRate] = useState('0.08');
   const [macroscopicRate, setMacroscopicRate] = useState('1');
+  const [preExponential, setPreExponential] = useState('1e7');
+  const [activationEnergy, setActivationEnergy] = useState('50000');
+  const [temperatureKelvin, setTemperatureKelvin] = useState('298.15');
+  const [arrheniusFeedback, setArrheniusFeedback] = useState<string | null>(null);
   const [volumeLiters, setVolumeLiters] = useState('1e-15');
   const [conversionFeedback, setConversionFeedback] = useState<string | null>(null);
   const [seed, setSeed] = useState('42');
@@ -130,6 +135,23 @@ export const ResearchLab: React.FC = () => {
         valid: false,
         message: cause instanceof Error ? cause.message : 'Could not parse equation.',
       });
+    }
+  };
+
+  const applyArrheniusRate = () => {
+    setArrheniusFeedback(null);
+    try {
+      const calculated = calculateArrheniusRate(
+        Number(preExponential),
+        Number(activationEnergy),
+        Number(temperatureKelvin),
+      );
+      setMacroscopicRate(String(calculated.rateConstant));
+      setArrheniusFeedback(
+        `k(T) = ${calculated.rateConstant.toExponential(6)}; exponential factor = ${calculated.exponentialFactor.toExponential(6)}. A's units are carried through unchanged.`,
+      );
+    } catch (cause) {
+      setArrheniusFeedback(cause instanceof Error ? cause.message : 'Arrhenius calculation failed.');
     }
   };
 
@@ -307,6 +329,31 @@ export const ResearchLab: React.FC = () => {
               <input type="number" min="0" step="0.01" value={rate} onChange={e => { setRate(e.target.value); setResult(null); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
+            <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
+              <p className="text-xs font-semibold text-zinc-300">Arrhenius temperature model</p>
+              <p className="mt-1 text-[11px] leading-5 text-zinc-500">Calculate k(T) = A exp(−Ea/RT). A carries the same units as k for the selected reaction order.</p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <label className="block min-w-0">
+                  <span className="text-[10px] text-zinc-400">A (same units as k)</span>
+                  <input type="number" min="0" step="any" value={preExponential} onChange={e => setPreExponential(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs outline-none focus:border-cyan-500" />
+                </label>
+                <label className="block min-w-0">
+                  <span className="text-[10px] text-zinc-400">Ea (J/mol)</span>
+                  <input type="number" min="0" step="any" value={activationEnergy} onChange={e => setActivationEnergy(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs outline-none focus:border-cyan-500" />
+                </label>
+                <label className="block min-w-0">
+                  <span className="text-[10px] text-zinc-400">T (K)</span>
+                  <input type="number" min="0" step="any" value={temperatureKelvin} onChange={e => setTemperatureKelvin(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs outline-none focus:border-cyan-500" />
+                </label>
+              </div>
+              <button onClick={applyArrheniusRate} className="mt-3 w-full rounded-lg border border-emerald-800 bg-emerald-950/30 px-3 py-2 text-xs font-medium text-emerald-200 hover:bg-emerald-900/40">Calculate k(T) and use in rate converter</button>
+              {arrheniusFeedback && <p role="status" className="mt-2 break-words text-[11px] leading-5 text-emerald-200">{arrheniusFeedback}</p>}
+              <p className="mt-2 text-[10px] leading-4 text-zinc-600">Ea is molar activation energy; R = 8.314462618 J mol⁻¹ K⁻¹. This is a parameter calculation, not a reaction-mechanism or transition-state prediction.</p>
+            </div>
+
             <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
               <p className="text-xs font-semibold text-zinc-300">Macroscopic kinetic constant converter</p>
               <p className="mt-1 text-[11px] leading-5 text-zinc-500">Convert k from concentration-based mass-action units to the SSA stochastic constant using reaction order and volume.</p>
