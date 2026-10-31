@@ -87,3 +87,8 @@ The versioned experiment record stores whether the stochastic constant was suppl
 ## Per-channel kinetic parameters
 
 Every reaction channel carries its own stochastic rate constant. The Research Lab allows direct per-channel entry and selects one channel at a time for macroscopic or Arrhenius-based conversion. Experiment record schema v2 stores an array of rate-parameterisation records keyed by reaction id, preventing one channel's conversion history from being mistaken for another's. A shared rate value should only be used where the model justifies it.
+
+
+## Ionic species and electron bookkeeping
+
+The equation parser supports explicit caret charge suffixes, including `Fe^3+`, `SO4^2-`, `H^+` and `e^-`. Ionic charge is represented independently from elemental composition. The explicit electron species has empty elemental composition and formal charge −1; it is the only atom-free species accepted by the validator. The parser does not infer oxidation states, protonation equilibria, coordination complexes, phase labels, isotope composition or solvent speciation. Researchers must encode chemically relevant species and charges explicitly. Balance validation establishes only elemental and formal-charge balance for the declared species.
