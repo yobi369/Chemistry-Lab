@@ -47,3 +47,23 @@ test('chemical equation parser', async (t) => {
     assert.throws(() => parseReactionEquation('H2 ->'), /both sides/);
   });
 });
+
+test('multi-step reaction network parser', async (t) => {
+  await t.test('builds distinct channels with shared species', async () => {
+    const { parseReactionNetwork } = await import('./formula');
+    const parsed = parseReactionNetwork(
+      '# two illustrative channels\n2 H2 + O2 -> 2 H2O\n\n2 H2O -> 2 H2 + O2',
+      0.1,
+    );
+    assert.equal(parsed.network.reactions.length, 2);
+    assert.equal(parsed.network.species.length, 3);
+    assert.deepEqual(validateNetwork(parsed.network), []);
+    assert.equal(parsed.network.reactions[0].id, 'reaction-1');
+    assert.equal(parsed.network.reactions[1].id, 'reaction-2');
+  });
+
+  await t.test('rejects empty network input', async () => {
+    const { parseReactionNetwork } = await import('./formula');
+    assert.throws(() => parseReactionNetwork('# no equations', 1), /at least one reaction/);
+  });
+});
