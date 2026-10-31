@@ -97,16 +97,27 @@ export default function App() {
   useEffect(() => {
     let animId: number;
     let lastTime = performance.now();
+    let frameAccumulator = 0;
+    const fixedStepFrames = 1;
+    const maxCatchUpSteps = 6;
 
     const loop = (time: number) => {
-      const delta = (time - lastTime) / 1000;
+      // The visual particle engine uses a fixed frame-sized integration step.
+      // Accumulate wall-clock time so fast and slow displays advance consistently.
+      const elapsedSeconds = Math.min(Math.max((time - lastTime) / 1000, 0), 0.1);
       lastTime = time;
 
       if (isRunning && engineRef.current) {
-        // Run physics update steps based on simSpeed
-        const steps = Math.max(1, Math.round(simSpeed));
-        for (let s = 0; s < steps; s++) {
+        frameAccumulator += elapsedSeconds * 60 * Math.max(0.05, simSpeed);
+        let steps = 0;
+        while (frameAccumulator >= fixedStepFrames && steps < maxCatchUpSteps) {
           engineRef.current.update(1.0);
+          frameAccumulator -= fixedStepFrames;
+          steps += 1;
+        }
+        // Drop excessive backlog instead of entering a spiral of death after tab suspension.
+        if (steps === maxCatchUpSteps && frameAccumulator >= fixedStepFrames) {
+          frameAccumulator = 0;
         }
 
         // Periodically sync React state with engine
