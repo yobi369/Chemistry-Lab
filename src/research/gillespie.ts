@@ -81,7 +81,10 @@ export function simulateGillespie(
   let terminatedBy: SimulationResult['terminatedBy'] = 'time_limit';
 
   while (time < options.durationSeconds) {
-    if (options.shouldCancel?.()) break;
+    if (options.shouldCancel?.()) {
+      terminatedBy = 'cancelled';
+      break;
+    }
 
     const propensities = network.reactions.map((reaction) => {
       let propensity = reaction.stochasticRateConstant;
@@ -93,7 +96,10 @@ export function simulateGillespie(
     });
     const totalPropensity = propensities.reduce((sum, value) => sum + value, 0);
 
-    if (!(totalPropensity > 0) || !Number.isFinite(totalPropensity)) {
+    if (!Number.isFinite(totalPropensity)) {
+      throw new SimulationInputError('Total reaction propensity overflowed; reduce populations or rate constants.');
+    }
+    if (!(totalPropensity > 0)) {
       terminatedBy = 'no_enabled_reactions';
       break;
     }
