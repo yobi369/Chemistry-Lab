@@ -92,3 +92,8 @@ Every reaction channel carries its own stochastic rate constant. The Research La
 ## Ionic species and electron bookkeeping
 
 The equation parser supports explicit caret charge suffixes, including `Fe^3+`, `SO4^2-`, `H^+` and `e^-`. Ionic charge is represented independently from elemental composition. The explicit electron species has empty elemental composition and formal charge −1; it is the only atom-free species accepted by the validator. The parser does not infer oxidation states, protonation equilibria, coordination complexes, phase labels, isotope composition or solvent speciation. Researchers must encode chemically relevant species and charges explicitly. Balance validation establishes only elemental and formal-charge balance for the declared species.
+
+
+## Automatic equation balancing
+
+The optional equation balancer constructs an exact integer conservation matrix over all elements and, when present, formal charge. It uses rational reduced row-echelon form and converts a positive nullspace vector to primitive integer coefficients. For nullity greater than one, the current implementation searches positive free-variable assignments from 1 through 12 (up to four free variables) and selects the smallest coefficient sum encountered. This is a bounded search, not a general integer-programming proof of globally minimal coefficients for every underdetermined system. Equations with species on both sides must be simplified first. Always review the returned equation and confirm species identities.

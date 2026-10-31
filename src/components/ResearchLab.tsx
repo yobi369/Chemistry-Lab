@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   parseReactionNetwork,
+  balanceReactionNetwork,
   simulateEnsemble,
   simulateGillespie,
   convertMacroscopicRateConstant,
@@ -107,6 +108,16 @@ export const ResearchLab: React.FC = () => {
   const maxCount = result
     ? Math.max(1, ...(Object.values(result.initialCounts) as number[]), ...(Object.values(result.finalCounts) as number[]))
     : Math.max(1, ...(Object.values(initialCounts) as number[]));
+
+  const autoBalanceEquations = () => {
+    try {
+      const balanced = balanceReactionNetwork(equationInput);
+      setEquationInput(balanced);
+      setEquationFeedback({ valid: true, message: 'Exact integer balancing completed. Review the coefficients, then validate and load the network.' });
+    } catch (cause) {
+      setEquationFeedback({ valid: false, message: cause instanceof Error ? cause.message : 'Automatic balancing failed.' });
+    }
+  };
 
   const validateAndLoadEquation = () => {
     setEquationFeedback(null);
@@ -318,7 +329,8 @@ export const ResearchLab: React.FC = () => {
             className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-cyan-500" />
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-[11px] text-zinc-600">One reaction per line. Blank lines and # comments are ignored.</span>
-            <button onClick={validateAndLoadEquation} className="rounded-lg border border-cyan-700 bg-cyan-950/60 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-900/70">Validate & load network</button>
+            <button onClick={autoBalanceEquations} className="rounded-lg border border-emerald-800 bg-emerald-950/40 px-4 py-2.5 text-sm font-medium text-emerald-200 hover:bg-emerald-900/50">Auto-balance</button>
+                        <button onClick={validateAndLoadEquation} className="rounded-lg border border-cyan-700 bg-cyan-950/60 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-900/70">Validate & load network</button>
           </div>
         </div>
         {equationFeedback && (
