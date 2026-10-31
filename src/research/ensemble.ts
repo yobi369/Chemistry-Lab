@@ -54,6 +54,9 @@ export function simulateEnsemble(
       seed,
       maxEvents: options.maxEvents,
     });
+    if (trajectory.terminatedBy === 'event_limit') {
+      throw new SimulationInputError(`Replicate ${replicate + 1} reached the event limit; increase the limit or shorten the simulation horizon before interpreting the ensemble.`);
+    }
 
     const n = replicate + 1;
     for (const id of ids) {
