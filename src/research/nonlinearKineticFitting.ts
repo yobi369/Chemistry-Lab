@@ -172,6 +172,47 @@ function integrate(
   return result;
 }
 
+
+/** Simulate a fixed-parameter mechanism at requested times (same deterministic RK4 core as the fitter). */
+export function simulateMassActionMechanism(
+  mechanism: KineticMechanism,
+  rateConstantsPerSecond: Readonly<Record<string, number>>,
+  requestedTimesSeconds: readonly number[],
+  maxIntegrationStepSeconds = 0.01,
+): readonly { timeSeconds: number; concentrations: Readonly<Record<string, number>> }[] {
+  if (!mechanism.speciesIds.length || new Set(mechanism.speciesIds).size !== mechanism.speciesIds.length ||
+      !mechanism.reactions.length || new Set(mechanism.reactions.map(r => r.id)).size !== mechanism.reactions.length) {
+    throw new SimulationInputError('Mechanism must contain unique species and reaction ids.');
+  }
+  const ids = new Set(mechanism.speciesIds);
+  for (const id of ids) {
+    if (!finite(mechanism.initialConcentrations[id]) || mechanism.initialConcentrations[id] < 0) {
+      throw new SimulationInputError(`Initial concentration for "${id}" must be finite and non-negative.`);
+    }
+  }
+  for (const reaction of mechanism.reactions) {
+    if (!reaction.reactants.length || !reaction.products.length ||
+        [...reaction.reactants, ...reaction.products].some(term =>
+          !ids.has(term.speciesId) || !Number.isSafeInteger(term.coefficient) || term.coefficient < 1)) {
+      throw new SimulationInputError(`Reaction "${reaction.id}" has invalid stoichiometry.`);
+    }
+    if (!finite(rateConstantsPerSecond[reaction.id]) || rateConstantsPerSecond[reaction.id] < 0) {
+      throw new SimulationInputError(`Rate constant for "${reaction.id}" must be finite and non-negative.`);
+    }
+  }
+  if (!requestedTimesSeconds.length || requestedTimesSeconds.some(t => !finite(t) || t < 0) ||
+      !finite(maxIntegrationStepSeconds) || maxIntegrationStepSeconds <= 0) {
+    throw new SimulationInputError('Requested times and maximum integration step must be valid and non-negative/positive.');
+  }
+  const times = [...new Set(requestedTimesSeconds)].sort((a,b)=>a-b);
+  const rates = mechanism.reactions.map(reaction => rateConstantsPerSecond[reaction.id]);
+  const states = integrate(mechanism,rates,times,maxIntegrationStepSeconds);
+  return requestedTimesSeconds.map(timeSeconds => ({
+    timeSeconds,
+    concentrations: Object.fromEntries(mechanism.speciesIds.map((id,index)=>[id,states.get(timeSeconds)![index]])),
+  }));
+}
+
 /**
  * Fit bounded macroscopic mass-action rate constants to multi-species time-series.
  * The deterministic model is integrated by fixed-step classical RK4 and optimized

@@ -1,0 +1,17 @@
+{
+  "source": "NIST Chemical Kinetics Database, SRD 17, record 1992DU/HES1077-1092:1",
+  "sourceUrl": "https://kinetics.nist.gov/kinetics/Detail?id=1992DU%2FHES1077-1092%3A1",
+  "bibliography": "Du, H.; Hessler, J.P. Rate coefficient for H + O2 -> OH + O: results at high temperatures, 2000 to 5300 K. Journal of Chemical Physics 96 (1992), 1077-1092.",
+  "reaction": "H + O2 -> OH + O",
+  "dataType": "Absolute value measured directly; experimental",
+  "temperatureRangeKelvin": [2050,2950],
+  "rateExpression": { "A": 1.55e-10, "activationEnergyJPerMol": 60446, "gasConstantJPerMolKelvin": 8.314472, "units": "cm^3 molecule^-1 s^-1" },
+  "uncertainty": { "relativeA": 0.1606, "activationEnergyJPerMol": 4232 },
+  "tabulatedArrheniusValues": [
+    [2050,4.47e-12],[2100,4.86e-12],[2150,5.27e-12],[2200,5.69e-12],[2250,6.12e-12],
+    [2300,6.57e-12],[2350,7.02e-12],[2400,7.49e-12],[2450,7.97e-12],[2500,8.46e-12],
+    [2550,8.95e-12],[2600,9.46e-12],[2650,9.97e-12],[2700,1.05e-11],[2750,1.10e-11],
+    [2800,1.15e-11],[2850,1.21e-11],[2900,1.26e-11],[2950,1.32e-11]
+  ],
+  "note": "NIST labels these values as calculated from the displayed Arrhenius expression; they are not raw experimental time-series observations."
+}
