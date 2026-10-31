@@ -159,3 +159,6 @@ Equation input supports explicit caret charge suffixes such as `Fe^3+`, `SO4^2-`
 ## Exact equation balancing
 
 The Research Lab includes an exact rational row-reduction balancer for neutral and explicitly charged equations. It solves the homogeneous elemental/charge conservation system and returns positive integer stoichiometric coefficients, including electron bookkeeping for redox equations. For underdetermined equations, it searches a bounded set of free-variable assignments and selects the smallest coefficient sum found. It may ask the user to simplify highly underdetermined networks; always inspect the balanced equation and confirm the chemical species before loading it.
+
+
+Saved v2 JSON experiment records can now be imported back into the Research Lab. Import validation checks the network, populations, per-channel kinetic parameterisation and event-by-event population transitions before restoring the saved trajectory. This catches malformed or internally inconsistent files; it does not certify the scientific correctness of their model assumptions.

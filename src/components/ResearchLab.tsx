@@ -10,6 +10,7 @@ import {
   validateInitialCounts,
   createExperimentRecord,
   serializeExperiment,
+  parseExperimentRecord,
   simulationEventsToCsv,
 } from '../research';
 import type { EnsembleResult, RateParameterisation, ReactionRateParameterisation, ReactionNetwork, SimulationResult, SpeciesCounts } from '../research';
@@ -108,6 +109,38 @@ export const ResearchLab: React.FC = () => {
   const maxCount = result
     ? Math.max(1, ...(Object.values(result.initialCounts) as number[]), ...(Object.values(result.finalCounts) as number[]))
     : Math.max(1, ...(Object.values(initialCounts) as number[]));
+
+  const importExperimentFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    try {
+      if (file.size > 50 * 1024 * 1024) throw new Error('Experiment files must be 50 MB or smaller.');
+      const record = parseExperimentRecord(await file.text());
+      setActiveNetwork(record.model);
+      setActiveEquation(record.model.reactions.map(reaction => reaction.label).join('\\n'));
+      setInitialPopulationValues(Object.fromEntries(record.model.species.map(species => [
+        species.id, String(record.initialCounts[species.id]),
+      ])));
+      setRateValues(Object.fromEntries(record.model.reactions.map(reaction => [
+        reaction.id, String(reaction.stochasticRateConstant),
+      ])));
+      setRateParameterisations(Object.fromEntries(record.rateParameterisations.map(({ reactionId, ...parameter }) => [
+        reactionId, parameter,
+      ])));
+      setSelectedReactionId(record.model.reactions[0]?.id ?? '');
+      setDuration(String(record.simulation.durationSeconds));
+      setSeed(String(record.simulation.seed));
+      setResult(record.result);
+      setEnsembleResult(null);
+      setPendingArrhenius(null);
+      setEquationFeedback({ valid: true, message: 'Experiment imported. The saved event history and reaction trajectory passed integrity checks.' });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Experiment file could not be imported.');
+    } finally {
+      event.target.value = '';
+    }
+  };
 
   const autoBalanceEquations = () => {
     try {
@@ -339,6 +372,16 @@ export const ResearchLab: React.FC = () => {
           </p>
         )}
         <p className="mt-2 text-[11px] leading-5 text-zinc-600">Supported: element symbols, integer coefficients, nested () and [] groups, hydrate separators (· or .), and forward/reversible arrows. Ionic charges use caret notation (Fe^3+, SO4^2-, H^+, e^-). Phase labels, isotope notation and structural isomers are not yet modelled.</p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-3">
+          <div>
+            <p className="text-xs font-medium text-zinc-300">Resume a saved experiment</p>
+            <p className="mt-1 text-[11px] text-zinc-600">Import a v2 JSON record. Network, settings and event history are integrity-checked before loading.</p>
+          </div>
+          <label className="cursor-pointer rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-800">
+            Import experiment JSON
+            <input type="file" accept=".json,application/json" onChange={importExperimentFile} className="sr-only" />
+          </label>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
