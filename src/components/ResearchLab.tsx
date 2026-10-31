@@ -78,8 +78,8 @@ export const ResearchLab: React.FC = () => {
     [network, population],
   );
   const maxCount = result
-    ? Math.max(1, ...Object.values(result.initialCounts), ...Object.values(result.finalCounts))
-    : Math.max(1, ...Object.values(initialCounts));
+    ? Math.max(1, ...(Object.values(result.initialCounts) as number[]), ...(Object.values(result.finalCounts) as number[]))
+    : Math.max(1, ...(Object.values(initialCounts) as number[]));
 
   const validateAndLoadEquation = () => {
     setEquationFeedback(null);
