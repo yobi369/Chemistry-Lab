@@ -65,6 +65,8 @@ export const AdvancedAnalysisPanel: React.FC<Props> = ({ network }) => {
   const [structureError, setStructureError] = useState<string | null>(null);
 
   const reactionOptions = useMemo(() => network.reactions, [network]);
+  const speciesSignature = network.species.map(item => item.id).join('|');
+  const reactionSignature = network.reactions.map(item => item.id).join('|');
   useEffect(() => {
     setFormationData(JSON.stringify(Object.fromEntries(network.species.map(item => [item.id, 0])), null, 2));
     setActivityData(JSON.stringify(Object.fromEntries(network.species.map(item => [item.id, 1])), null, 2));
