@@ -77,15 +77,11 @@ src/
   utils/          Application utilities
 ```
 
-## Scientific validation roadmap
+## Scientific validation status and roadmap
 
-1. Add documented benchmark networks with analytical or literature reference expectations.
-2. Validate stochastic ensemble statistics against known distributions and deterministic rate equations in the appropriate large-population limit.
-3. Add uncertainty propagation, parameter estimation and sensitivity analysis.
-4. Add explicit unit-aware physical quantities and concentration/volume-aware rate-constant conversion.
-5. Add a provenance-rich experiment format, immutable input snapshots and machine-readable exports.
-6. Add molecular structure/geometry workflows only alongside validated computational backends and clear method provenance.
-7. Obtain independent domain-expert review before making research-grade accuracy claims.
+Implemented software-verification capabilities include analytical first-order and competing-channel benchmarks, an independent in-repository first-reaction SSA comparison, first-order parameter estimation, local sensitivity, seeded rate-uncertainty propagation, reaction standard-state thermodynamics and molecular atom/bond graph validation. See [advanced research methods and limitations](docs/RESEARCH_ROADMAP_AND_LIMITATIONS.md) and [analytical SSA benchmarks](docs/ANALYTICAL_SSA_BENCHMARKS.md).
+
+Remaining validation work includes an external trusted SSA implementation comparison, published experimental datasets, realistic noisy parameter-recovery studies, reversible equilibrium benchmark systems, independent cheminformatics canonicalisation/valence checks, and domain-expert review. Passing automated tests is not scientific certification.
 
 ## Reproducibility and reporting
 
@@ -170,3 +166,14 @@ The Research Lab calculates the exact integer stoichiometric matrix (products mi
 
 
 On import, the app now recomputes macroscopic and Arrhenius conversion metadata and checks that the resulting stochastic constant matches the stored reaction channel. This catches parameter-file inconsistencies in addition to event-history tampering.
+
+
+## Advanced Research Analysis workspace
+
+The Research Lab now includes a second analysis workspace for:
+- First-order decay parameter estimation from time-series observations, with optional measurement-standard-deviation weighting.
+- Local finite-difference sensitivity and lognormal Monte Carlo propagation of rate-parameter uncertainty.
+- Reaction-level standard Gibbs energy, equilibrium constant, reaction quotient and ΔG analysis from user-supplied formation energies and dimensionless activities.
+- Explicit molecular atom/bond graph validation, formula/charge checks and connected-component reporting.
+
+These tools expose their assumptions and do not constitute a general-purpose kinetic mechanism fitter, molecular canonicalisation engine or fully coupled thermodynamic simulator. See the method specification before using results in research reports.
