@@ -290,7 +290,7 @@ export const ResearchLab: React.FC = () => {
                   <label key={species.id} className="block min-w-0">
                     <span className="block truncate text-[11px] text-zinc-400">{species.label}</span>
                     <input type="number" min="0" step="1" value={initialPopulationValues[species.id] ?? '0'}
-                      onChange={e => setInitialPopulationValues(current => ({ ...current, [species.id]: e.target.value }))}
+                      onChange={e => { setInitialPopulationValues(current => ({ ...current, [species.id]: e.target.value })); setResult(null); setEnsembleResult(null); }}
                       className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-xs outline-none focus:border-cyan-500" />
                   </label>
                 ))}
@@ -299,12 +299,12 @@ export const ResearchLab: React.FC = () => {
             </div>
             <label className="block">
               <span className="text-xs text-zinc-400">Simulation horizon (seconds)</span>
-              <input type="number" min="0.001" step="0.1" value={duration} onChange={e => setDuration(e.target.value)}
+              <input type="number" min="0.001" step="0.1" value={duration} onChange={e => { setDuration(e.target.value); setResult(null); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
             <label className="block">
               <span className="text-xs text-zinc-400">Stochastic rate constant c (s⁻¹ per available reactant combination)</span>
-              <input type="number" min="0" step="0.01" value={rate} onChange={e => setRate(e.target.value)}
+              <input type="number" min="0" step="0.01" value={rate} onChange={e => { setRate(e.target.value); setResult(null); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
             <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
@@ -328,12 +328,12 @@ export const ResearchLab: React.FC = () => {
             </div>
             <label className="block">
               <span className="text-xs text-zinc-400">Ensemble replicates (2–1,000)</span>
-              <input type="number" min="2" max="1000" step="1" value={replicates} onChange={e => setReplicates(e.target.value)}
+              <input type="number" min="2" max="1000" step="1" value={replicates} onChange={e => { setReplicates(e.target.value); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500" />
             </label>
             <label className="block">
               <span className="text-xs text-zinc-400">Random seed (uint32)</span>
-              <input type="number" min="0" max="4294967295" step="1" value={seed} onChange={e => setSeed(e.target.value)}
+              <input type="number" min="0" max="4294967295" step="1" value={seed} onChange={e => { setSeed(e.target.value); setResult(null); setEnsembleResult(null); }}
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-cyan-500" />
             </label>
             <button onClick={run} disabled={validationIssues.length > 0 || initialCountIssues.length > 0}
