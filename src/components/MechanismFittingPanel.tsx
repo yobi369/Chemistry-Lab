@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { fitMassActionMechanism } from '../research';
-import type { NonlinearKineticFit } from '../research';
+import { fitMassActionMechanism, propagateCorrelatedKineticUncertainty } from '../research';
+import type { NonlinearKineticFit, CorrelatedKineticUncertaintyResult } from '../research';
 
 const defaultMechanism={
   speciesIds:['A','B','C'],
@@ -29,10 +29,11 @@ export const MechanismFittingPanel:React.FC=()=>{
   const [observationCsv,setObservationCsv]=useState(defaultObservations);
   const [maxStep,setMaxStep]=useState('0.005');
   const [result,setResult]=useState<NonlinearKineticFit|null>(null);
+  const [uncertainty,setUncertainty]=useState<CorrelatedKineticUncertaintyResult|null>(null);
   const [error,setError]=useState<string|null>(null);
   const [loading,setLoading]=useState(false);
   const run=()=>{
-    setLoading(true);setError(null);setResult(null);
+    setLoading(true);setError(null);setResult(null);setUncertainty(null);
     try{
       const mechanism=JSON.parse(mechanismJson);
       const parameters=JSON.parse(parameterJson);
@@ -48,6 +49,17 @@ export const MechanismFittingPanel:React.FC=()=>{
       setResult(fit);
     }catch(cause){setError(cause instanceof Error?cause.message:'Nonlinear mechanism fit failed.');}
     finally{setLoading(false);}
+  };
+  const propagateUncertainty=()=>{
+    try{
+      if(!result?.covarianceMatrix)throw new Error('A full-rank fit with an available covariance matrix is required.');
+      const mechanism=JSON.parse(mechanismJson);
+      const parameters=JSON.parse(parameterJson);
+      const times:number[]=Array.from(new Set<number>(result.fitted.map(row=>Number(row.timeSeconds))));
+      const propagated=propagateCorrelatedKineticUncertainty(mechanism,parameters,result.parameterEstimates,result.covarianceMatrix,times,
+        {sampleCount:250,seed:42,confidenceLevel:0.95,maxIntegrationStepSeconds:Number(maxStep)});
+      setUncertainty(propagated);setError(null);
+    }catch(cause){setUncertainty(null);setError(cause instanceof Error?cause.message:'Correlated uncertainty propagation failed.');}
   };
   return <article className="rounded-2xl border border-violet-900/50 bg-zinc-950/80 p-5">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -84,6 +96,8 @@ export const MechanismFittingPanel:React.FC=()=>{
         <div className="grid gap-2 sm:grid-cols-2">{Object.entries(result.parameterEstimates).map(([id,value])=><div key={id} className="rounded-lg border border-zinc-800 p-2"><p className="font-mono text-violet-200">{id}: {pretty(Number(value))}</p><p className="mt-1 text-[10px] text-zinc-500">SE {result.standardErrors?pretty(result.standardErrors[id]):'not identifiable'}</p></div>)}</div>
       </div>
       {result.correlationMatrix&&<div className="overflow-x-auto"><p className="mb-1 text-zinc-500">Local parameter correlation matrix</p><table className="min-w-[320px] text-left text-[10px]"><thead><tr><th className="p-1">Parameter</th>{Object.keys(result.parameterEstimates).map(id=><th key={id} className="p-1">{id}</th>)}</tr></thead><tbody>{Object.entries(result.correlationMatrix).map(([id,row])=><tr key={id} className="border-t border-zinc-800"><td className="p-1 font-mono">{id}</td>{Object.values(row).map((value,index)=><td key={index} className="p-1 font-mono">{Number.isFinite(value)?pretty(value):'n/a'}</td>)}</tr>)}</tbody></table></div>}
+      <button type="button" onClick={propagateUncertainty} disabled={!result.covarianceMatrix} className="rounded-lg border border-violet-700 bg-violet-950/50 px-3 py-2 text-[11px] text-violet-200 disabled:opacity-40">Propagate correlated parameter uncertainty (250 draws)</button>
+      {uncertainty&&<div className="overflow-x-auto"><p className="mb-1 text-zinc-500">95% correlated parameter prediction bands · {uncertainty.acceptedSamples} accepted draws</p><table className="min-w-[520px] w-full text-left text-[10px]"><thead><tr className="text-zinc-500"><th className="p-1">Time</th><th>Species</th><th>Mean</th><th>SD</th><th>2.5%</th><th>97.5%</th></tr></thead><tbody>{uncertainty.bands.map((band,index)=><tr key={index} className="border-t border-zinc-800 text-zinc-300"><td className="p-1">{band.timeSeconds}</td><td>{band.speciesId}</td><td>{pretty(band.mean)}</td><td>{pretty(band.standardDeviation)}</td><td>{pretty(band.lowerQuantile)}</td><td>{pretty(band.upperQuantile)}</td></tr>)}</tbody></table></div>}
       <div className="overflow-x-auto"><p className="mb-1 text-zinc-500">Fitted observations</p><table className="min-w-[460px] w-full text-left text-[10px]"><thead><tr className="text-zinc-500"><th className="p-1">Time</th><th>Species</th><th>Observed</th><th>Predicted</th><th>Residual</th></tr></thead><tbody>{result.fitted.map((row,index)=><tr key={index} className="border-t border-zinc-800 text-zinc-300"><td className="p-1">{row.timeSeconds}</td><td>{row.speciesId}</td><td>{pretty(row.observed)}</td><td>{pretty(row.predicted)}</td><td>{pretty(row.residual)}</td></tr>)}</tbody></table></div>
       {result.warnings.map((warning,index)=><p key={index} className="rounded-lg border border-amber-900/40 bg-amber-950/20 p-2 text-[10px] text-amber-200">{warning}</p>)}
       <p className="text-[10px] text-zinc-500">Weighted residual sum of squares: {pretty(result.weightedResidualSumSquares)} · degrees of freedom: {result.degreesOfFreedom}. Covariance is a local linear approximation; observation-error correlations are not modelled.</p>
