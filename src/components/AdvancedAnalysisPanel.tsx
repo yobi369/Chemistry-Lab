@@ -240,9 +240,7 @@ export const AdvancedAnalysisPanel: React.FC<Props> = ({ network }) => {
       <MechanismFittingPanel />
       <MolecularToolkitPanel />
       <p className="rounded-xl border border-amber-900/50 bg-amber-950/20 p-3 text-[10px] leading-5 text-amber-100/70">
-        Model boundaries: parameter fitting here is limited to positive first-order decay; uncertainty covers the fitted rate only;
-        thermodynamic results require consistent standard-state data and dimensionless activities; graph validation does not perform
-        full canonical SMILES/InChI generation, valence perception, stereochemical assignment or tautomer normalisation outside the separately identified RDKit toolkit.
+        Model boundaries: the single-species estimator is limited to positive first-order decay; the multi-step fitter uses fixed initial concentrations, local bounded optimisation and fixed-step RK4 with local linear covariance; thermodynamics assumes consistent standard states and ideal dimensionless activities; the graph checker is not a replacement for the separately identified RDKit toolkit.
       </p>
     </section>
   );
