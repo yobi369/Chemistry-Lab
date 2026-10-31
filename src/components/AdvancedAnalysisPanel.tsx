@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   fitFirstOrderDecay,
   estimateLocalSensitivity,
@@ -65,6 +65,11 @@ export const AdvancedAnalysisPanel: React.FC<Props> = ({ network }) => {
   const [structureError, setStructureError] = useState<string | null>(null);
 
   const reactionOptions = useMemo(() => network.reactions, [network]);
+  useEffect(() => {
+    setFormationData(JSON.stringify(Object.fromEntries(network.species.map(item => [item.id, 0])), null, 2));
+    setActivityData(JSON.stringify(Object.fromEntries(network.species.map(item => [item.id, 1])), null, 2));
+    setThermoReaction(network.reactions[0]?.id ?? '');
+  }, [network]);
   const runFit = () => {
     try {
       setFit(fitFirstOrderDecay(parseObservationCsv(observations)));
