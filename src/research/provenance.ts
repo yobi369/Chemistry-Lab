@@ -175,8 +175,10 @@ export function parseExperimentRecord(json: string): ExperimentRecord {
       result.events.length > record.simulation.maxEvents) {
     throw new Error('Saved simulation result metadata is inconsistent.');
   }
-  if (JSON.stringify(result.initialCounts) !== JSON.stringify(record.initialCounts)) {
-    throw new Error('Saved result initial populations do not match the experiment inputs.');
+  for (const species of record.model.species) {
+    if (result.initialCounts?.[species.id] !== record.initialCounts[species.id]) {
+      throw new Error('Saved result initial populations do not match the experiment inputs.');
+    }
   }
   if (!['time_limit', 'no_enabled_reactions', 'event_limit', 'cancelled'].includes(result.terminatedBy)) {
     throw new Error('Saved simulation termination state is invalid.');
