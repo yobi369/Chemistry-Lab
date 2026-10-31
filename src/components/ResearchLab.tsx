@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { AdvancedAnalysisPanel } from './AdvancedAnalysisPanel';
 import {
   parseReactionNetwork,
   balanceReactionNetwork,
@@ -675,6 +676,8 @@ export const ResearchLab: React.FC = () => {
           )}
         </div>
       </div>
+
+      <AdvancedAnalysisPanel network={network} />
 
       <div className="rounded-xl border border-amber-900/60 bg-amber-950/20 p-4">
         <p className="text-xs font-semibold text-amber-200">Scientific interpretation boundary</p>
