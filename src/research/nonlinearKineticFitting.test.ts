@@ -43,7 +43,10 @@ test('multi-step nonlinear mass-action kinetic fitting', async t => {
     const observations=[0,1,2,3,4,5].map(timeSeconds=>({timeSeconds,speciesId:'A',value:Math.exp(-0.7*timeSeconds)}));
     const fit=fitMassActionMechanism(sequential,parameters,observations);
     assert.equal(fit.locallyIdentifiable,false);
-    assert.ok(fit.warnings.some(w=>w.includes('not identifiable')));
+    assert.equal(fit.identifiableParameterCount,1);
+    assert.equal(fit.parameterCount,2);
+    assert.equal(fit.covarianceMatrix,null);
+    assert.ok(fit.warnings.some(w=>w.includes('locally unidentifiable')));
   });
   await t.test('rejects missing parameter bounds, unknown species and incomplete uncertainty', () => {
     assert.throws(()=>fitMassActionMechanism(sequential,[parameters[0]],[
