@@ -13,3 +13,4 @@ export * from './parameterEstimation';
 export * from './sensitivity';
 export * from './thermodynamics';
 export * from './molecularIdentity';
+export * from './reactionThermodynamics';
