@@ -149,3 +149,8 @@ Experiment JSON exports now also record how the active stochastic rate was obtai
 ## Per-reaction kinetic parameters
 
 Multi-step networks now have an independent stochastic rate constant for every reaction channel. The macroscopic k converter and Arrhenius-to-k workflow target the selected channel, rather than forcing one kinetic parameter across the entire network. Experiment records use schema `chemistry-lab-experiment/v2` and preserve the rate parameterisation separately for each reaction channel.
+
+
+## Ionic species and redox equations
+
+Equation input supports explicit caret charge suffixes such as `Fe^3+`, `SO4^2-`, `H^+` and the electron species `e^-`. Charge is stored separately from elemental composition and checked alongside atom conservation. The electron is the only supported atom-free species and carries charge −1. Phase labels, isotope notation, coordination-state inference and structural-isomer identity remain unsupported; specify the relevant species and charges explicitly.
