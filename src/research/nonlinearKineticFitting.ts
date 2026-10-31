@@ -123,6 +123,37 @@ function informationEigenCondition(matrix: Matrix): number {
 function dot(a: readonly number[], b: readonly number[]): number {
   return a.reduce((sum, value, i) => sum + value * b[i], 0);
 }
+function scaledSensitivityInformation(jacobian: Matrix): {
+  readonly columnNorms: number[];
+  readonly normalizedInformation: Matrix;
+  readonly rank: number;
+  readonly conditionNumber: number;
+} {
+  const parameterCount = jacobian[0]?.length ?? 0;
+  const columnNorms = Array.from({length:parameterCount},(_,column)=>
+    Math.sqrt(jacobian.reduce((sum,row)=>sum+row[column]**2,0)));
+  const normalizedInformation = Array.from({length:parameterCount},(_,a)=>
+    Array.from({length:parameterCount},(_,b)=>
+      columnNorms[a]>0&&columnNorms[b]>0
+        ? jacobian.reduce((sum,row)=>sum+row[a]*row[b],0)/(columnNorms[a]*columnNorms[b])
+        : 0));
+  const basis:number[][]=[];
+  for(let column=0;column<parameterCount;column++){
+    if(columnNorms[column]<=1e-14) continue;
+    const vector=jacobian.map(row=>row[column]/columnNorms[column]);
+    for(let pass=0;pass<2;pass++){
+      for(const q of basis){
+        const projection=dot(vector,q);
+        for(let i=0;i<vector.length;i++) vector[i]-=projection*q[i];
+      }
+    }
+    const residualNorm=Math.sqrt(dot(vector,vector));
+    if(residualNorm>1e-8) basis.push(vector.map(value=>value/residualNorm));
+  }
+  return {columnNorms,normalizedInformation,rank:basis.length,
+    conditionNumber:informationEigenCondition(normalizedInformation)};
+}
+
 function integrate(
   mechanism: KineticMechanism,
   rateConstants: readonly number[],
