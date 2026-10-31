@@ -111,3 +111,8 @@ No license has yet been selected. Until a license is added, normal copyright res
 ## Stochastic Research Lab
 
 The application now includes a dedicated **Research Lab · SSA** workspace. It exposes a reproducible event-driven simulation with editable initial population, time horizon, stochastic rate constant and random seed. The built-in hydrogen dissociation network is an illustrative software-verification example; its rate parameter is not an experimentally calibrated value. See [the research-kernel model specification](docs/RESEARCH_KERNEL.md) before interpreting results.
+
+
+## Formula and equation validation
+
+The research kernel parses neutral molecular/formula-unit strings, including nested parentheses/square brackets and hydrate notation, and converts typed equations into reaction networks for atom/charge balance checks. Ionic charge notation and phase labels are not inferred; formula strings are treated as neutral formula units. Reversible arrows are preserved as metadata, while the current SSA network builder represents the written forward direction only.
