@@ -144,3 +144,8 @@ The Research Lab includes an Arrhenius calculator for k(T) = A exp(−Ea/RT). Us
 
 
 Experiment JSON exports now also record how the active stochastic rate was obtained: illustrative default, direct stochastic input, macroscopic k-to-c conversion, or Arrhenius k(T) followed by volume-aware conversion. Where applicable, the record includes the original k, volume, reaction order, A, Ea and temperature so the parameter pathway is auditable.
+
+
+## Per-reaction kinetic parameters
+
+Multi-step networks now have an independent stochastic rate constant for every reaction channel. The macroscopic k converter and Arrhenius-to-k workflow target the selected channel, rather than forcing one kinetic parameter across the entire network. Experiment records use schema `chemistry-lab-experiment/v2` and preserve the rate parameterisation separately for each reaction channel.
