@@ -34,8 +34,8 @@ export function validateNetwork(network: ReactionNetwork): ValidationIssue[] {
         });
       }
     }
-    if (Object.keys(species.composition).length === 0) {
-      issues.push({ code: 'INVALID_COMPOSITION', message: 'Composition must contain at least one element.', path: `${path}.composition` });
+    if (Object.keys(species.composition).length === 0 && !(species.id === 'electron' && species.charge === -1)) {
+      issues.push({ code: 'INVALID_COMPOSITION', message: 'Composition must contain at least one element; the explicit electron species is the only atom-free exception.', path: `${path}.composition` });
     }
   });
 
