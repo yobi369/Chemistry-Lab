@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import test from 'node:test';
+import assert from 'node:assert/strict';
 import { simulateGillespie } from './gillespie';
 import { validateNetwork } from './validateNetwork';
 import type { ReactionNetwork } from './types';
@@ -19,12 +20,12 @@ const network: ReactionNetwork = {
   ],
 };
 
-describe('research chemistry kernel', () => {
-  it('accepts a balanced reaction network', () => {
-    expect(validateNetwork(network)).toEqual([]);
+test('research chemistry kernel', async (t) => {
+  await t.test('accepts a balanced reaction network', () => {
+    assert.deepEqual(validateNetwork(network), []);
   });
 
-  it('rejects atom and charge imbalance', () => {
+  await t.test('rejects atom and charge imbalance', () => {
     const invalid: ReactionNetwork = {
       species: [
         { id: 'H2', label: 'hydrogen', composition: { H: 2 }, charge: 0 },
@@ -37,25 +38,24 @@ describe('research chemistry kernel', () => {
         stochasticRateConstant: 1,
       }],
     };
-    expect(validateNetwork(invalid).map((issue) => issue.code)).toContain('ATOM_IMBALANCE');
+    assert.ok(validateNetwork(invalid).some((issue) => issue.code === 'ATOM_IMBALANCE'));
   });
 
-  it('is reproducible for a fixed seed', () => {
+  await t.test('is reproducible for a fixed seed', () => {
     const options = { durationSeconds: 2, seed: 42 };
-    expect(simulateGillespie(network, { A: 25, B: 0 }, options))
-      .toEqual(simulateGillespie(network, { A: 25, B: 0 }, options));
+    assert.deepEqual(simulateGillespie(network, { A: 25, B: 0 }, options), simulateGillespie(network, { A: 25, B: 0 }, options));
   });
 
-  it('conserves entity count for a 1:1 isomerisation', () => {
+  await t.test('conserves entity count for a 1:1 isomerisation', () => {
     const result = simulateGillespie(network, { A: 25, B: 0 }, { durationSeconds: 10, seed: 7 });
-    expect(result.finalCounts.A + result.finalCounts.B).toBe(25);
-    expect(result.finalCounts.A).toBeGreaterThanOrEqual(0);
-    expect(result.finalCounts.B).toBeGreaterThanOrEqual(0);
+    assert.equal(result.finalCounts.A + result.finalCounts.B, 25);
+    assert.ok(result.finalCounts.A >= 0);
+    assert.ok(result.finalCounts.B >= 0);
   });
 
-  it('does not fire a reaction without enough reactants', () => {
+  await t.test('does not fire a reaction without enough reactants', () => {
     const result = simulateGillespie(network, { A: 0, B: 0 }, { durationSeconds: 10 });
-    expect(result.events).toHaveLength(0);
-    expect(result.terminatedBy).toBe('no_enabled_reactions');
+    assert.equal(result.events.length, 0);
+    assert.equal(result.terminatedBy, 'no_enabled_reactions');
   });
 });
