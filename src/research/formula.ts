@@ -52,6 +52,7 @@ export function parseChemicalFormula(input: string): Record<string, number> {
         const char = component[index];
         if (char === ')' || char === ']') {
           if (char !== closing) throw new ChemicalParseError(`Unexpected closing group "${char}" in formula "${formula}".`);
+          if (terms === 0) throw new ChemicalParseError(`Empty group in formula "${formula}".`);
           index += 1;
           return atoms;
         }
