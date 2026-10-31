@@ -1,5 +1,7 @@
 import type { ReactionNetwork, SimulationResult, SpeciesCounts } from './types';
 import { validateInitialCounts, validateNetwork } from './validateNetwork';
+import { convertMacroscopicRateConstant } from './rateConversion';
+import { calculateArrheniusRate } from './arrhenius';
 
 export type RateParameterisation =
   | { readonly kind: 'illustrative_default'; readonly stochasticRateConstant: number }
@@ -162,6 +164,38 @@ export function parseExperimentRecord(json: string): ExperimentRecord {
     if (!reaction || !Number.isFinite(item.stochasticRateConstant) || item.stochasticRateConstant < 0 ||
         Math.abs(item.stochasticRateConstant - reaction.stochasticRateConstant) > Math.max(1, Math.abs(reaction.stochasticRateConstant)) * 1e-12) {
       throw new Error(`Rate parameterisation for "${item.reactionId}" does not match the saved reaction model.`);
+    }
+    const close = (a: number, b: number) =>
+      Math.abs(a - b) <= Math.max(1, Math.abs(a), Math.abs(b)) * 1e-12;
+    try {
+      if (item.kind === 'macroscopic_conversion') {
+        const converted = convertMacroscopicRateConstant(reaction, item.macroscopicRateConstant, item.volumeLiters);
+        if (item.reactionOrder !== converted.reactionOrder ||
+            item.macroscopicUnits !== converted.macroscopicUnits ||
+            !close(converted.stochasticRateConstant, item.stochasticRateConstant)) {
+          throw new Error('Macroscopic conversion metadata does not reproduce the saved stochastic rate.');
+        }
+      } else if (item.kind === 'arrhenius_conversion') {
+        const arrhenius = calculateArrheniusRate(
+          item.preExponentialFactor,
+          item.activationEnergyJPerMol,
+          item.temperatureKelvin,
+        );
+        if (!close(arrhenius.rateConstant, item.macroscopicRateConstant)) {
+          throw new Error('Arrhenius inputs do not reproduce the saved macroscopic rate constant.');
+        }
+        const converted = convertMacroscopicRateConstant(reaction, arrhenius.rateConstant, item.volumeLiters);
+        if (item.reactionOrder !== converted.reactionOrder ||
+            item.macroscopicUnits !== converted.macroscopicUnits ||
+            !close(converted.stochasticRateConstant, item.stochasticRateConstant)) {
+          throw new Error('Arrhenius/macroscopic conversion metadata does not reproduce the saved stochastic rate.');
+        }
+      } else if (item.kind !== 'direct_stochastic' && item.kind !== 'illustrative_default') {
+        throw new Error('Unknown rate parameterisation kind.');
+      }
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Invalid rate parameterisation.';
+      throw new Error(`Rate parameterisation for "${item.reactionId}" is invalid: ${message}`);
     }
   }
   for (const reaction of record.model.reactions) {

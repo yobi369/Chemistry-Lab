@@ -167,3 +167,6 @@ Saved v2 JSON experiment records can now be imported back into the Research Lab.
 ## Stoichiometric network analysis
 
 The Research Lab calculates the exact integer stoichiometric matrix (products minus reactants), matrix rank, independent reaction-cycle dimension and a basis for the left nullspace. The left-nullspace vectors identify linear combinations of declared species counts conserved by the written network. The analysis is exact linear algebra over the declared reaction model; it cannot detect missing species, omitted reservoirs, unmodelled exchange or incorrect chemical identities.
+
+
+On import, the app now recomputes macroscopic and Arrhenius conversion metadata and checks that the resulting stochastic constant matches the stored reaction channel. This catches parameter-file inconsistencies in addition to event-history tampering.
