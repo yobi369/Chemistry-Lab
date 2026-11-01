@@ -55,7 +55,7 @@ export const MechanismFittingPanel:React.FC=()=>{
       if(!result?.covarianceMatrix)throw new Error('A full-rank fit with an available covariance matrix is required.');
       const mechanism=JSON.parse(mechanismJson);
       const parameters=JSON.parse(parameterJson);
-      const times:number[]=Array.from(new Set<number>(result.fitted.map(row=>Number(row.timeSeconds))));
+      const times: number[] = result.fitted.map(row => Number(row.timeSeconds)).filter(Number.isFinite);
       const propagated=propagateCorrelatedKineticUncertainty(mechanism,parameters,result.parameterEstimates,result.covarianceMatrix,times,
         {sampleCount:250,seed:42,confidenceLevel:0.95,maxIntegrationStepSeconds:Number(maxStep)});
       setUncertainty(propagated);setError(null);
