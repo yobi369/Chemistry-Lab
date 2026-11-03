@@ -109,7 +109,7 @@ test('multi-step nonlinear mass-action kinetic fitting', async t => {
     assert.equal(fit.converged, true, fit.warnings.join('; '));
     assert.ok(Math.abs(fit.parameterEstimates.k1 - reference.parameters.k1) <= fixture.typescript_fit.parameter_tolerance[0]);
     assert.ok(Math.abs(fit.parameterEstimates.k2 - reference.parameters.k2) <= fixture.typescript_fit.parameter_tolerance[1]);
-    assert.ok(fit.weightedResidualSumSquares <= fixture.typescript_fit.weighted_rss_tolerance);
+    assert.ok(fit.weightedResidualSumSquares <= fixture.typescript_fit.weighted_rss_tolerance, JSON.stringify({ rss: fit.weightedResidualSumSquares, estimates: fit.parameterEstimates, diagnostics: fit.integrationDiagnostics, failures: fit.integrationFailures, warnings: fit.warnings }));
     assert.ok(fit.integrationDiagnostics);
     assert.ok(fit.integrationDiagnostics.acceptedSteps > 0);
     assert.ok(fit.integrationDiagnostics.newtonIterations > 0);
