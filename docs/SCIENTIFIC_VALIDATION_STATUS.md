@@ -22,3 +22,6 @@ The Qin Model 4 conditional profile-likelihood implementation is described in [Q
 
 
 The expanded Qin uncertainty workflow archives a 200-replicate-per-seed, three-seed cluster-bootstrap report. Seed-specific percentile endpoints and optimizer-bound hit frequencies are retained separately; seed-to-seed ranges are reported only as stability diagnostics, not confidence intervals.
+
+
+The first 200-replicate, three-seed Qin Model 4 experiment completed with 600/600 converged 4L fits and 597/600 converged 4G fits. Several phase-2 rate constants hit the lower optimizer bound in 17–58% of resamples; seed-to-seed upper-endpoint spread was 28.6% for 4L Hepure k2 and 23.6% for 4G Hepure k2. See [Qin 2018 bootstrap uncertainty](QIN_2018_BOOTSTRAP_UNCERTAINTY.md) for the recorded frequencies and interpretation. This reinforces the weak-identifiability caveat rather than establishing narrow or publication-ready intervals.
