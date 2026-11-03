@@ -50,30 +50,28 @@ export async function loadRDKitToolkit(): Promise<RDKitModule> {
   if (window.__chemistryLabRDKitPromise) return window.__chemistryLabRDKitPromise;
   window.__chemistryLabRDKitPromise = (async () => {
     if (!window.initRDKitModule) {
+      const manifestResponse = await fetch(`${RDKIT_ASSET_BASE}manifest.json`, { cache: 'no-cache' });
+      if (!manifestResponse.ok) throw new Error('Could not load the local RDKit asset manifest.');
+      const manifest = await manifestResponse.json() as {
+        version?: string;
+        files?: Record<string, { integrity?: string }>;
+      };
+      if (manifest.version !== RDKIT_VERSION) throw new Error('Local RDKit asset version does not match the application pin.');
+      const integrity = manifest.files?.['RDKit_minimal.js']?.integrity;
+      if (!integrity?.startsWith('sha256-')) throw new Error('Local RDKit script integrity metadata is missing.');
       await new Promise<void>((resolve, reject) => {
-        const existing = document.querySelector<HTMLScriptElement>('script[data-chemistry-lab-rdkit="true"]');
-        if (existing) {
-          existing.addEventListener('load', () => resolve(), { once: true });
-          existing.addEventListener('error', () => reject(new Error('Could not load the RDKit.js script.')), { once: true });
-          return;
-        }
+        document.querySelector<HTMLScriptElement>('script[data-chemistry-lab-rdkit="true"]')?.remove();
         const script = document.createElement('script');
-        const manifestResponse = await fetch(`${RDKIT_ASSET_BASE}manifest.json`, { cache: 'no-cache' });
-        if (!manifestResponse.ok) throw new Error('Could not load the local RDKit asset manifest.');
-        const manifest = await manifestResponse.json() as {
-          version?: string;
-          files?: Record<string, { integrity?: string }>;
-        };
-        if (manifest.version !== RDKIT_VERSION) throw new Error('Local RDKit asset version does not match the application pin.');
-        const integrity = manifest.files?.['RDKit_minimal.js']?.integrity;
-        if (!integrity?.startsWith('sha256-')) throw new Error('Local RDKit script integrity metadata is missing.');
         script.src = `${RDKIT_ASSET_BASE}RDKit_minimal.js`;
         script.integrity = integrity;
         script.async = true;
         script.crossOrigin = 'anonymous';
         script.dataset.chemistryLabRdkit = 'true';
         script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Could not load the pinned local RDKit.js runtime.'));
+        script.onerror = () => {
+          script.remove();
+          reject(new Error('Could not load the pinned local RDKit.js runtime.'));
+        };
         document.head.appendChild(script);
       });
     }
