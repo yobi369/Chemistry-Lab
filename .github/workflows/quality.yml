@@ -56,6 +56,16 @@ jobs:
           name: qin-model4-cluster-bootstrap
           path: /tmp/qin-model4-bootstrap.json
           retention-days: 30
+      - name: Run 200-replicate Qin Model 4 bootstrap with three independent seeds
+        if: steps.qin_data.outcome == 'success'
+        run: bun run scripts/benchmarks/bootstrap_qin_2018_model4_multiseed.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv 200 20261103,20261104,20261105 > /tmp/qin-model4-bootstrap-multiseed.json
+      - name: Archive Qin Model 4 multi-seed bootstrap stability report
+        if: steps.qin_data.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: qin-model4-multiseed-bootstrap
+          path: /tmp/qin-model4-bootstrap-multiseed.json
+          retention-days: 30
       - name: Run Qin Model 4 conditional profile-likelihood diagnostics
         if: steps.qin_data.outcome == 'success'
         run: bun run scripts/benchmarks/profile_qin_2018_model4.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv 41 > /tmp/qin-model4-profiles.json
