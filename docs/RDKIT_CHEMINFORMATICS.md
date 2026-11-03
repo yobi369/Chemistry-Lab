@@ -2,7 +2,7 @@
 
 ## Toolkit and runtime
 
-Chemistry Lab integrates the official RDKit.js MinimalLib WebAssembly distribution, pinned to RDKit 2026.9.1. The browser lazily loads the JavaScript glue and WASM binary from same-origin `/vendor/rdkit/` assets. The production build copies the pinned `@rdkit/rdkit@2026.9.1` MinimalLib runtime into the static deployment. A pinned jsDelivr fallback remains available if the local assets are missing or fail to initialize. SMILES and molecule data are processed in the browser; they are not submitted to a Chemistry Lab backend or third-party conversion API.
+Chemistry Lab integrates the official RDKit.js MinimalLib WebAssembly distribution, pinned to RDKit 2026.9.1. The browser lazily loads the JavaScript glue and WASM binary from same-origin `/vendor/rdkit/2026.9.1/` assets. The production build copies the pinned `@rdkit/rdkit@2026.9.1` MinimalLib runtime into the static deployment. A pinned jsDelivr fallback remains available if the local assets are missing or fail to initialize. SMILES and molecule data are processed in the browser; they are not submitted to a Chemistry Lab backend or third-party conversion API.
 
 The adapter calls RDKit molecule parsing with sanitization enabled, then requests canonical isomeric SMILES, standard InChI, InChIKey, descriptors, atom/bond counts and RDKit JSON. The JSON preserves RDKit atom and bond properties, including stereo annotations. The toolkit's sanitization performs RDKit chemistry checks (including valence/sanitization checks); invalid structures fail rather than falling back to the project's hand-written graph checks. The WASM molecule is deleted in a `finally` block.
 
