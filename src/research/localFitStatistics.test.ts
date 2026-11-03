@@ -16,6 +16,8 @@ test('withholds covariance for rank-deficient parameters', () => {
   const result = calculateLocalFitStatistics(['a','b'], [1,1],
     p => [p[0]+p[1]-2, 2*p[0]+2*p[1]-4], 1);
   assert.equal(result.locallyIdentifiable, false);
-  assert.equal(result.standardErrors, null);
+  assert.ok(result.standardErrors !== null);
+  assert.equal(Object.values(result.standardErrors!).filter(value => value !== null).length, 1);
+  assert.equal(result.covarianceMatrix, null);
   assert.equal(result.identifiableParameterCount, 1);
 });
