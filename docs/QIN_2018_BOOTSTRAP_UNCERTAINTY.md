@@ -97,3 +97,22 @@ Model 4L Toda k2 also reached the upper optimizer bound in 6/1,500 fits (0.4%). 
 These results do **not** establish that the weak phase-2 rates are well identified. Increasing the number of resamples reduces Monte Carlo noise in the bootstrap summaries; it does not remove structural or practical non-identifiability in the experiment. The raw samples are retained so the empirical distributions can be plotted and inspected without relying only on percentile summaries.
 
 The 31-condition selection remains supported by Tables S5/S6 and the published degrees of freedom, but it is not directly confirmed by original author fitting files. Do not present these percentile intervals as calibrated confidence intervals without additional model and error-structure validation.
+
+
+## Verified 500 × 3 results (3 November 2026)
+
+The quality workflow run `41635161445` completed 500 replicates for each of seeds `20261103`, `20261104` and `20261105`, with **1,500/1,500 converged replicates for each model (4L and 4G)** and zero failures. The archived artifact is `qin-model4-multiseed-bootstrap`.
+
+The bootstrap confirms substantial boundary mass in the weakly identified phase-2 rates:
+
+| Model / rate | Lower-bound hits across 1,500 replicates | Interpretation |
+|---|---:|---|
+| 4L Beijing k2 | 919 (61.3%) | Strong lower-bound pile-up |
+| 4L Hepure k2 | 644 (42.9%) | Strong lower-bound pile-up |
+| 4L Toda k2 | 376 (25.1%) | Lower-bound pile-up; 6 upper-bound hits |
+| 4G Beijing k2 | 381 (25.4%) | Lower-bound pile-up |
+| 4G Hepure k2 | 622 (41.5%) | Strong lower-bound pile-up |
+| 4G Alfa k2 | 322 (21.5%) | Lower-bound pile-up |
+| 4G CMC-nZVI k2 | 266 (17.7%) | Lower-bound pile-up |
+
+The largest seed-to-seed relative spread in the 97.5th percentile was 7.9% for 4L Hepure k2, 7.2% for 4L Beijing k2, and 11.5% for 4G CMC-nZVI k2. These endpoint ranges indicate Monte Carlo stability of the resampling calculation; they do not resolve the boundary pile-up, model uncertainty, or the unconfirmed observation-selection convention. Treat the intervals as exploratory sensitivity summaries, not calibrated confidence intervals.
