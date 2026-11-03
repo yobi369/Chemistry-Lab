@@ -40,7 +40,7 @@ jobs:
         run: bun run scripts/benchmarks/verify_qin_2018_dataset.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
       - name: Fit Qin Models 4L and 4G against candidate paper observation set
         if: steps.qin_data.outcome == 'success'
-        run: bun run scripts/benchmarks/fit_qin_2018_dataset.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
+        run: bun run scripts/benchmarks/fit_qin_2018_dataset.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv > /tmp/qin-model4-typescript.json
       - name: Fit Qin Models 1 to 3 against original experimental series
         if: steps.qin_data.outcome == 'success'
         run: bun run scripts/benchmarks/fit_qin_2018_models_1_to_3.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
@@ -57,6 +57,9 @@ jobs:
         run: python scripts/benchmarks/verify_scipy_references.py
       - name: Verify independent nonlinear kinetic fitting benchmark
         run: python scripts/benchmarks/verify_scipy_kinetic_fit.py
+      - name: Independently verify Qin Model 4 global fits with SciPy
+        if: steps.qin_data.outcome == 'success'
+        run: python scripts/benchmarks/verify_qin_global_fits_scipy.py /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv /tmp/qin-model4-typescript.json
       - name: Build application
         run: bun run build
       - name: Install pinned RDKit.js runtime for molecular smoke tests
