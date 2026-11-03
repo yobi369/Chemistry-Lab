@@ -65,3 +65,21 @@ test('rejects invalid model, ids and iron labels', () => {
   assert.throws(() => inferQinIronType('unknown sample'), /Could not infer/);
   assert.equal(inferQinIronType('#64 CMC nZVI + dithionite'), 'CMC-nZVI');
 });
+
+test('bootstrap refits can skip local covariance while preserving fitted parameters', () => {
+  const data = [
+    makeSeries('a1', 'Alfa', 0.42, 0.008, 2.2, 20.5),
+    makeSeries('a2', 'Alfa', 0.42, 0.008, 1.2, 3.2),
+    makeSeries('b1', 'Beijing', 0.14, 0.001, 1.9, 73.5),
+    makeSeries('b2', 'Beijing', 0.14, 0.001, 2.7, 50.6),
+  ];
+  const fit = fitQinModel4('4L', data, {
+    weighting: 'unweighted', zeroStandardDeviation: 'unweighted',
+    calculateUncertainty: false,
+  });
+  assert.equal(fit.converged, true);
+  assert.equal(fit.covarianceMatrix, null);
+  assert.equal(fit.standardErrors, null);
+  assert.ok(Math.abs(fit.rateConstantsPerHour.Alfa.k1PerHour - 0.42) < 1e-4);
+  assert.ok(fit.warnings.some(warning => warning.includes('skipped by caller')));
+});

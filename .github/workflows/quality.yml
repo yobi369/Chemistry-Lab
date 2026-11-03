@@ -46,6 +46,16 @@ jobs:
       - name: Fit Qin Models 1 to 3 against original experimental series
         if: steps.qin_data.outcome == 'success'
         run: bun run scripts/benchmarks/fit_qin_2018_models_1_to_3.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv > /tmp/qin-models123-typescript.json
+      - name: Run deterministic Qin Model 4 stratified cluster bootstrap
+        if: steps.qin_data.outcome == 'success'
+        run: bun run scripts/benchmarks/bootstrap_qin_2018_model4.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv 20 20261103 > /tmp/qin-model4-bootstrap.json
+      - name: Archive Qin Model 4 bootstrap intervals
+        if: steps.qin_data.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: qin-model4-cluster-bootstrap
+          path: /tmp/qin-model4-bootstrap.json
+          retention-days: 30
       - name: Verify independent SciPy reference benchmarks
         uses: actions/setup-python@v6
         with:

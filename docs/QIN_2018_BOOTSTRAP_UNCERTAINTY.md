@@ -1,0 +1,36 @@
+# Qin 2018: stratified cluster-bootstrap uncertainty
+
+## Purpose
+
+The published-data reproduction provides local covariance estimates from the fitted sensitivity matrix. Those estimates rely on a local linear approximation and can be unstable when rates are weakly identified. This benchmark adds a complementary, nonparametric sensitivity analysis for the Model 4 rate constants.
+
+## Resampling design
+
+The experimental condition (one complete time series) is the resampling unit. Each bootstrap replicate samples the observed conditions with replacement **within each iron-material group**, preserving the original number of conditions per group. All time points from a selected condition remain together, and repeated selections receive unique internal identifiers.
+
+The 4L and 4G models are refitted to every replicate using the published-comparison unweighted objective and the same candidate observation set as the baseline reproduction. The report contains the baseline estimate and empirical 2.5th, 50th and 97.5th percentiles for each shared/grouped rate parameter. The seed, requested/converged/failed replicate counts and resampling unit are recorded.
+
+## Reproduce
+
+```bash
+bun run scripts/benchmarks/bootstrap_qin_2018_model4.ts \
+  data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv 200 20261103
+```
+
+Use 200–500 replicates for exploratory reporting and inspect the returned convergence count, interval shape and rate-bound warnings before interpretation. The quality workflow runs a deterministic 20-replicate smoke benchmark and archives its JSON output; that short CI run verifies the pipeline and reproducibility only. It is not a publication-grade interval estimate.
+
+## Interpretation and limitations
+
+This is a **stratified experimental-condition cluster bootstrap**, not a residual bootstrap, parametric measurement-error bootstrap, profile likelihood, or Bayesian posterior. It measures how the fitted rate estimates vary when the available experimental conditions are resampled within each iron type. It preserves within-series time dependence and each selected series' observed time grid, but does not generate new measurement noise.
+
+The 35 experimental conditions are a small and uneven sample of material/treatment combinations. The bootstrap cannot create information absent from the experiment, and it does not resolve structural non-identifiability. Weakly identified Beijing/Hepure phase-2 rates may yield asymmetric, broad, multimodal or boundary-limited distributions. A percentile interval should not be interpreted as a calibrated confidence interval when the bootstrap distribution is unstable or too few replicates converge.
+
+The fit set remains a documented reconstruction: all non-zero-time observations plus the seven CMC-nZVI time-zero records. This produces the published degrees of freedom, but has not been confirmed against original author fitting files. The bootstrap inherits that uncertainty.
+
+## Required review before scientific reporting
+
+- Run at least 200 replicates with more than one seed and compare interval stability.
+- Review convergence failures and parameter-bound frequencies; do not silently discard a large or systematic subset.
+- Plot per-parameter bootstrap distributions and check multimodality/asymmetry, especially for weakly identified rates.
+- Compare bootstrap intervals with the local covariance approximation and the paper's tabulated uncertainty where comparable.
+- Keep the inferred observation-set convention clearly labelled until author analysis files or an explicit selection rule are obtained.
