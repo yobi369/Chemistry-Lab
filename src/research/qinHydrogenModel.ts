@@ -204,21 +204,22 @@ export function fitQinModel4(
     }
     return { amplitudes, residuals, cost };
   };
-  let theta = [...initial], current = evaluate(theta), lambda = 1e-3, converged = false, iterations = 0;
+  let theta = [...initial], current = evaluate(theta), lambda = 1e-3;
+  let converged = freeIndices.length === 0, iterations = 0;
   const jacobianAt = (point: readonly number[], base: readonly number[]) => {
-    const columns = point.map((value, j) => {
+    const columns = freeIndices.map(index => {
       const step = 1e-4;
       const plus = [...point], minus = [...point];
-      plus[j] = Math.min(Math.log(10), value + step);
-      minus[j] = Math.max(Math.log(1e-8), value - step);
+      plus[index] = Math.min(Math.log(10), point[index] + step);
+      minus[index] = Math.max(Math.log(1e-8), point[index] - step);
       const rp = evaluate(plus).residuals, rm = evaluate(minus).residuals;
-      const width = plus[j] - minus[j];
+      const width = plus[index] - minus[index];
       return rp.map((v, i) => (v - rm[i]) / width);
     });
     return base.map((_, i) => columns.map(col => col[i]));
   };
-  for (; iterations < maxIterations; iterations++) {
-    const j = jacobianAt(theta, current.residuals), n = theta.length;
+  for (; iterations < maxIterations && freeIndices.length > 0; iterations++) {
+    const j = jacobianAt(theta, current.residuals), n = freeIndices.length;
     const normal = Array.from({ length: n }, (_, a) =>
       Array.from({ length: n }, (_, b) => j.reduce((sum, row) => sum + row[a] * row[b], 0)));
     const gradient = Array.from({ length: n }, (_, a) =>
@@ -227,7 +228,10 @@ export function fitQinModel4(
       v + (i === k ? lambda * Math.max(normal[i][i], 1e-10) : 0)));
     const delta = solve(damped, gradient.map(v => -v));
     if (!delta) break;
-    const candidate = theta.map((v, i) => Math.max(Math.log(1e-8), Math.min(Math.log(10), v + delta[i])));
+    const candidate = [...theta];
+    freeIndices.forEach((index, i) => {
+      candidate[index] = Math.max(Math.log(1e-8), Math.min(Math.log(10), theta[index] + delta[i]));
+    });
     const next = evaluate(candidate);
     if (next.cost < current.cost) {
       const improvement = current.cost - next.cost;
