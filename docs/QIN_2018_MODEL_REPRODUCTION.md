@@ -66,3 +66,13 @@ Synthetic tests verify recovery of known 4L and 4G parameters and the distinct p
 4. Add full joint covariance, standard errors, parameter correlations, profile-likelihood or bootstrap checks for weakly identified rates.
 5. Implement Models 1–3 and reproduce the four-model comparison, not only the preferred Model 4.
 6. Add independent SciPy least_squares fitting and compare predictions, objective and parameter estimates against the TypeScript implementation.
+
+## Models 1–3 now implemented
+
+The same fitting API exposes the earlier alternatives described in the article:
+
+- **Model 1 — uniform passivation:** one exponential appearance term, A(1 − exp(−kt)); k is global by iron type and A is local.
+- **Model 2 — replacement:** a zero-order linear term plus an exponential term, C[t + (r − 1)(1 − exp(−kt))/k], where C = S₁,₀·kH₂,₂ and r = kH₂,₁/kH₂,₂; k and r are global by iron type, C is local.
+- **Model 3 — advanced phase replacement:** the integrated two-step sequence S₁ → S₂ → inactive products, with k₁, k₂ and r global by iron type and C local. The implementation uses the analytic equal-rate limit to avoid cancellation when k₁ ≈ k₂.
+
+All three implementations are currently covered by synthetic parameter-recovery tests. They are not yet fitted to the Zenodo observations; no paper-comparison statistics are claimed.
