@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "source": "Independent SciPy 1.17.0 solve_ivp BDF and Radau references for the cell-centred 2-D Neumann diffusion method of lines; explicit finite-volume Euler is independently evaluated against both.",
+  "domain": {
+    "widthMeters": 1,
+    "heightMeters": 1,
+    "diffusionCoefficientM2PerS": 0.1,
+    "timeSeconds": 0.01,
+    "boundaryCondition": "no-flux",
+    "initialCondition": "c(x,y,0)=1+0.2*cos(pi*x)*cos(pi*y) at cell centres",
+    "explicitDtFactor": 0.02
+  },
+  "solverSettings": {
+    "rtol": 1e-11,
+    "atol": 1e-13
+  },
+  "meshes": [
+    {
+      "cells": 8,
+      "steps": 3,
+      "timeStepSeconds": 0.0033333333333333335,
+      "maxAbsExplicitVsBdf": 0.000011992764316293147,
+      "maxAbsBdfRadau": 2.4799051701052122e-11,
+      "maxAbsBdfVsContinuum": 0.0000476098151840354,
+      "massError": 0
+    },
+    {
+      "cells": 16,
+      "steps": 13,
+      "timeStepSeconds": 0.0007692307692307692,
+      "maxAbsExplicitVsBdf": 0.000002894849807866251,
+      "maxAbsBdfRadau": 2.559819023417731e-11,
+      "maxAbsBdfVsContinuum": 0.000012300693989386602,
+      "massError": 0
+    },
+    {
+      "cells": 32,
+      "steps": 51,
+      "timeStepSeconds": 0.000196078431372549,
+      "maxAbsExplicitVsBdf": 7.462857556372882e-7,
+      "maxAbsBdfRadau": 2.5800694913868938e-11,
+      "maxAbsBdfVsContinuum": 0.000003100461155924883,
+      "massError": 0
+    },
+    {
+      "cells": 64,
+      "steps": 205,
+      "timeStepSeconds": 0.00004878048780487805,
+      "maxAbsExplicitVsBdf": 1.8620297903559901e-7,
+      "maxAbsBdfRadau": 2.5851654150699233e-11,
+      "maxAbsBdfVsContinuum": 7.767199319275164e-7,
+      "massError": 0
+    }
+  ]
+}
