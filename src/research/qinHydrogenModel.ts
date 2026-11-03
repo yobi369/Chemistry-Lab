@@ -203,7 +203,7 @@ export function fitQinModel4(
     }
     return { amplitudes, residuals, cost };
   };
-  let theta = [...initial], current = evaluate(theta), lambda = 1e-3, converged = false, iterations = 0;
+  let theta = [...initial], current = evaluate(theta), lambda = 1e-3, converged = (options.fixedRateConstantsPerHour !== undefined), iterations = 0;
   const jacobianAt = (point: readonly number[], base: readonly number[]) => {
     const columns = point.map((value, j) => {
       const step = 1e-4;
