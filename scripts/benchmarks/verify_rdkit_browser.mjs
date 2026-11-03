@@ -56,6 +56,10 @@ const page = await context.newPage();
 const localAssets = new Set();
 const cdnRequests = [];
 const pageErrors = [];
+const consoleErrors = [];
+const failedRequests = [];
+page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+page.on('requestfailed', request => failedRequests.push({url:request.url(),failure:request.failure()?.errorText}));
 page.on('request', request => {
   const url = request.url();
   if (url.includes('/vendor/rdkit/')) localAssets.add(new URL(url).pathname);
@@ -117,6 +121,8 @@ try {
     cdnFallbackRequests: cdnRequests.length,
     offlineReloadAndAnalysis: 'passed',
     pageErrors,
+    consoleErrors,
+    failedRequests,
   }, null, 2));
 } finally {
   await context.setOffline(false).catch(() => {});
