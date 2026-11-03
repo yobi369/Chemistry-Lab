@@ -19,6 +19,7 @@ export interface QinModel4Options {
   readonly zeroStandardDeviation: 'exclude' | 'unweighted' | 'error';
   readonly initialRatesByIronType?: Readonly<Partial<Record<QinIronType, { k1PerHour: number; k2PerHour: number }>>>;
   readonly initialSharedK1PerHour?: number;
+  readonly initialRatiosByIronType?: Readonly<Partial<Record<QinIronType, number>>>;
   readonly maxIterations?: number;
   readonly tolerance?: number;
 }
