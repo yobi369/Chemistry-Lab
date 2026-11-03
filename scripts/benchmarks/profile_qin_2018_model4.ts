@@ -69,7 +69,7 @@ function profile(model: QinModel4Variant, parameter: string) {
   const points = [...new Set([
     ...Array.from({ length: gridPoints }, (_, i) => {
       const logRate = Math.log(1e-8) + i * (Math.log(10) - Math.log(1e-8)) / (gridPoints - 1);
-      return Math.exp(logRate);
+      return Math.min(10, Math.max(1e-8, Math.exp(logRate)));
     }),
     estimate,
   ])].sort((a, b) => a - b);
