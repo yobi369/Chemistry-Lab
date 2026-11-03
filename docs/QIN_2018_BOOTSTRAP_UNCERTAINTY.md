@@ -8,7 +8,7 @@ The published-data reproduction provides local covariance estimates from the fit
 
 The experimental condition (one complete time series) is the resampling unit. Each bootstrap replicate samples the observed conditions with replacement **within each iron-material group**, preserving the original number of conditions per group. All time points from a selected condition remain together, and repeated selections receive unique internal identifiers.
 
-The 4L and 4G models are refitted to every replicate using the published-comparison unweighted objective and the same candidate observation set as the baseline reproduction. The report contains the baseline estimate and empirical 2.5th, 50th and 97.5th percentiles for each shared/grouped rate parameter. The seed, requested/converged/failed replicate counts and resampling unit are recorded.
+The 4L and 4G models are refitted to every replicate using the published-comparison unweighted objective and the same candidate observation set as the baseline reproduction. The report contains the baseline estimate and empirical 2.5th, 50th and 97.5th percentiles for each shared/grouped rate parameter. It also records baseline warnings and per-parameter counts of bootstrap estimates that hit the optimizer's lower or upper rate bounds. The seed, requested/converged/failed replicate counts and resampling unit are recorded.
 
 ## Reproduce
 
@@ -30,7 +30,7 @@ The fit set remains a documented reconstruction: all non-zero-time observations 
 ## Required review before scientific reporting
 
 - Run at least 200 replicates with more than one seed and compare interval stability.
-- Review convergence failures and parameter-bound frequencies; do not silently discard a large or systematic subset.
+- Review convergence failures, baseline warnings and the reported lower/upper bound-hit frequencies; do not silently discard a large or systematic subset.
 - Plot per-parameter bootstrap distributions and check multimodality/asymmetry, especially for weakly identified rates.
 - Compare bootstrap intervals with the local covariance approximation and the paper's tabulated uncertainty where comparable.
 - Keep the inferred observation-set convention clearly labelled until author analysis files or an explicit selection rule are obtained.
