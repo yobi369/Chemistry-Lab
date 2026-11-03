@@ -1,3 +1,4 @@
+import { calculateLocalFitStatistics } from './localFitStatistics';
 export type QinModel4Variant = '4L' | '4G';
 export type QinIronType = 'Alfa' | 'Beijing' | 'Hepure' | 'Toda' | 'CMC-nZVI';
 
@@ -42,6 +43,12 @@ export interface QinModel4Fit {
   readonly reducedChiSquare: number | null;
   readonly iterations: number;
   readonly converged: boolean;
+  readonly standardErrors: Readonly<Record<string, number>> | null;
+  readonly covarianceMatrix: readonly (readonly number[])[] | null;
+  readonly correlationMatrix: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
+  readonly identifiableParameterCount: number;
+  readonly locallyIdentifiable: boolean;
+  readonly informationConditionNumber: number;
   readonly warnings: readonly string[];
 }
 
@@ -238,9 +245,41 @@ export function fitQinModel4(
   const parameterCount = rateKeys.length + 2 * series.length;
   const degreesOfFreedom = includedObservationCount - parameterCount;
   const weightedResidualSumSquares = options.weighting === 'standard-deviation' ? current.cost : null;
+  const parameterNames = [
+    ...rateKeys.map(key => key === 'GLOBAL:k1' ? 'GLOBAL.k1PerHour' : key.replace(':', '.').replace('k1', 'k1PerHour').replace('k2', 'k2PerHour')),
+    ...series.flatMap(s => [s.experimentId + '.A', s.experimentId + '.B']),
+  ];
+  const parameterValues = [
+    ...theta.map(Math.exp),
+    ...series.flatMap(s => [current.amplitudes[s.experimentId].A, current.amplitudes[s.experimentId].B]),
+  ];
+  const residualAt = (values: readonly number[]) => {
+    const result: number[] = [];
+    prepared.forEach((s, seriesIndex) => {
+      const getRate = (key: string) => values[rateKeys.indexOf(key)];
+      const k1 = variant === '4L' ? getRate(s.ironType + ':k1') : getRate('GLOBAL:k1');
+      const k2 = getRate(s.ironType + ':k2');
+      const A = values[rateKeys.length + 2 * seriesIndex];
+      const B = values[rateKeys.length + 2 * seriesIndex + 1];
+      s.observations.forEach((o, i) => {
+        const w = s.weights[i];
+        if (w === null) return;
+        const predicted = A * -Math.expm1(-k1 * o.timeHours) + B * -Math.expm1(-k2 * o.timeHours);
+        result.push((o.hydrogenMicromoles - predicted) * Math.sqrt(w));
+      });
+    });
+    return result;
+  };
+  const covarianceScale = degreesOfFreedom > 0
+    ? (options.weighting === 'standard-deviation' ? 1 : current.cost / degreesOfFreedom)
+    : 1;
+  const statistics = degreesOfFreedom > 0
+    ? calculateLocalFitStatistics(parameterNames, parameterValues, residualAt, covarianceScale)
+    : null;
   const warnings: string[] = [];
   if (!converged) warnings.push('Optimizer stopped without satisfying the convergence criterion; inspect initial rates and identifiability.');
   if (degreesOfFreedom <= 0) warnings.push('Non-positive residual degrees of freedom; uncertainty statistics are not defined.');
+  if (statistics) warnings.push(...statistics.warnings);
   if (excludedZeroStandardDeviationCount) warnings.push(excludedZeroStandardDeviationCount + ' zero-SD observations were excluded from the weighted objective by explicit policy.');
   if (variant === '4G') warnings.push('4G constrains k1 to one shared value across the full dataset; k2 remains grouped by iron type.');
   return {
@@ -251,7 +290,14 @@ export function fitQinModel4(
     sumSquaredResiduals, weightedResidualSumSquares,
     reducedChiSquare: weightedResidualSumSquares !== null && degreesOfFreedom > 0
       ? weightedResidualSumSquares / degreesOfFreedom : null,
-    iterations, converged, warnings,
+    iterations, converged,
+    standardErrors: statistics?.standardErrors ?? null,
+    covarianceMatrix: statistics?.covarianceMatrix ?? null,
+    correlationMatrix: statistics?.correlationMatrix ?? null,
+    identifiableParameterCount: statistics?.identifiableParameterCount ?? 0,
+    locallyIdentifiable: statistics?.locallyIdentifiable ?? false,
+    informationConditionNumber: statistics?.informationConditionNumber ?? Number.POSITIVE_INFINITY,
+    warnings,
   };
 }
 
