@@ -22,7 +22,8 @@
       "maxAbsExplicitVsBdf": 0.000011992764316293147,
       "maxAbsBdfRadau": 2.4799051701052122e-11,
       "maxAbsBdfVsContinuum": 0.0000476098151840354,
-      "massError": 0
+      "massError": 0,
+      "bdfAmplitudeFactor": 0.9807018014561061
     },
     {
       "cells": 16,
@@ -31,7 +32,8 @@
       "maxAbsExplicitVsBdf": 0.000002894849807866251,
       "maxAbsBdfRadau": 2.559819023417731e-11,
       "maxAbsBdfVsContinuum": 0.000012300693989386602,
-      "massError": 0
+      "massError": 0,
+      "bdfAmplitudeFactor": 0.9805164337870292
     },
     {
       "cells": 32,
@@ -40,7 +42,8 @@
       "maxAbsExplicitVsBdf": 7.462857556372882e-7,
       "maxAbsBdfRadau": 2.5800694913868938e-11,
       "maxAbsBdfVsContinuum": 0.000003100461155924883,
-      "massError": 0
+      "massError": 0,
+      "bdfAmplitudeFactor": 0.9804698734188911
     },
     {
       "cells": 64,
@@ -49,7 +52,8 @@
       "maxAbsExplicitVsBdf": 1.8620297903559901e-7,
       "maxAbsBdfRadau": 2.5851654150699233e-11,
       "maxAbsBdfVsContinuum": 7.767199319275164e-7,
-      "massError": 0
+      "massError": 0,
+      "bdfAmplitudeFactor": 0.9804582196391433
     }
   ]
 }
