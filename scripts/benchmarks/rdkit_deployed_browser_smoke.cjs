@@ -64,7 +64,7 @@ async function waitForDeployment() {
     await inchiLocator.waitFor({ state: 'visible', timeout: 60000 });
     const inchi = (await inchiLocator.textContent() || '').trim();
     const inchiKey = (await page.locator('p').filter({ hasText: /^[A-Z]{14}-[A-Z]{10}-[A-Z]$/ }).first().textContent() || '').trim();
-    const smiles = (await page.locator('p').filter({ hasText: /C\[C@H\]/ }).first().textContent() || '').trim();
+    const smiles = (await page.getByText('Canonical isomeric SMILES', { exact: true }).locator('xpath=following-sibling::p[1]').textContent() || '').trim();
     if (!inchi.startsWith('InChI=1S/') || !/^[A-Z]{14}-[A-Z]{10}-[A-Z]$/.test(inchiKey) || !smiles) {
       throw new Error('RDKit returned incomplete identity output: ' + JSON.stringify({ inchi, inchiKey, smiles }));
     }
