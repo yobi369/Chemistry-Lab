@@ -43,7 +43,7 @@ const starts4G = {
 };
 const options = (model: QinModel4Variant, rates = model === '4L' ? starts : starts4G) => ({
   weighting: 'unweighted' as const, zeroStandardDeviation: 'unweighted' as const,
-  initialRatesByIronType: rates, ...(model === '4G' ? { initialSharedK1PerHour: 0.4719 } : {}),
+  initialRatesByIronType: rates, ...(model === '4G' ? { initialSharedK1PerHour: rates.Alfa.k1PerHour } : {}),
   maxIterations: 240, tolerance: 1e-8, calculateUncertainty: false,
 });
 const targets = [
