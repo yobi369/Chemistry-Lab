@@ -118,7 +118,7 @@ function run(variant: QinModel4Variant) {
 }
 console.log(JSON.stringify({
   source: '10.5281/zenodo.1979080',
-  fitSet: { selection: 'published Model 4 table set: exclude series #64, #65, #68, #69; retain all nine time points in the remaining 31 conditions', series: sourceSeries.length, observations: 287,
+  fitSet: { selection: 'published Model 4 table set: exclude series #64, #65, #68, #69; retain all nine time points in the remaining 31 conditions', series: sourceSeries.length, observations: 279,
     selectionConfirmedByAuthors: false },
   uncertaintyMethod: 'Stratified nonparametric cluster bootstrap over experimental conditions; within-series time points remain intact.',
   limitations: [
