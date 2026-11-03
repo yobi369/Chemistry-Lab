@@ -105,7 +105,7 @@ function profile(model: QinModel4Variant, parameter: string) {
     let best: ReturnType<typeof fitQinModel4> | null = null;
     const seedVariants = [
       ...makeSeedVariants(rates),
-      ...makeSeedVariants(continuationRates).slice(0, 5),
+      ...makeSeedVariants(continuationRates),
     ];
     for (const seed of seedVariants) {
       const fit = fitQinModel4(model, series, {
