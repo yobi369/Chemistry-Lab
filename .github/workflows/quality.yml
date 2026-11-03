@@ -56,6 +56,16 @@ jobs:
           name: qin-model4-cluster-bootstrap
           path: /tmp/qin-model4-bootstrap.json
           retention-days: 30
+      - name: Run Qin Model 4 conditional profile-likelihood diagnostics
+        if: steps.qin_data.outcome == 'success'
+        run: bun run scripts/benchmarks/profile_qin_2018_model4.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv 21 > /tmp/qin-model4-profiles.json
+      - name: Archive Qin Model 4 profile-likelihood curves
+        if: steps.qin_data.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: qin-model4-profile-likelihood
+          path: /tmp/qin-model4-profiles.json
+          retention-days: 30
       - name: Verify independent SciPy reference benchmarks
         uses: actions/setup-python@v6
         with:
