@@ -24,6 +24,7 @@ export interface QinModel4Options {
   readonly tolerance?: number;
   /** Set false for bootstrap refits that only need parameter estimates, not local covariance. */
   readonly calculateUncertainty?: boolean;
+  readonly fixedRateConstantsPerHour?: Readonly<Record<string, number>>;
 }
 export interface QinModel4Fit {
   readonly model: QinModel4Variant;
