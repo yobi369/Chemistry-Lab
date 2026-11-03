@@ -62,7 +62,7 @@ On the Model 4 set, the unweighted fit gives 4L SSE/df = 1.623 (paper: 1.6; df 2
 
 Models 1–3 were also fitted to the 31-condition / 279-point set represented in Tables S2–S4. Their unweighted SSE/df values are 44.787 (paper: 45; df 243), 7.156 (paper: 7.2; df 238), and 5.329 (paper: 5.3; df 233), respectively. Alfa control-series coefficients reproduce Tables S2–S4. The four additional CMC-nZVI dithionite/thiosulfate conditions appear in the Model 4 table set but not in Tables S2–S4; this model-specific coverage is encoded explicitly in the real-data CI benchmark.
 
-The SD-weighted sensitivity fit produces materially different coefficients and a reduced weighted residual statistic near 172, so it is retained only as a sensitivity analysis, not as the reference reproduction. The local covariance code returns diagnostics; some fit matrices are ill-conditioned or rank-deficient, so standard errors are withheld rather than fabricated.
+An independent SciPy 1.17 implementation using bounded nonlinear least squares and non-negative local linear amplitudes reproduces the TypeScript Model 4L/4G residual sums, degrees of freedom, well-identified rates and Alfa blank amplitudes to numerical tolerance. The same independent SciPy cross-check now passes for Models 1–3. The SD-weighted sensitivity fit produces materially different coefficients and a reduced weighted residual statistic near 172, so it is retained only as a sensitivity analysis, not as the reference reproduction. The local covariance code returns diagnostics; some fit matrices are ill-conditioned or rank-deficient, so standard errors are withheld rather than fabricated.
 
 ## Next validation gates
 
