@@ -38,3 +38,6 @@ The corrected Qin Model 4 benchmark now compares every one of the 279 TypeScript
 
 
 The stiff kinetic fitter now supports an opt-in adaptive implicit integration path while preserving RK4 as the default. A synthetic A→B→C fit with k1=800 s^-1 and k2=0.03 s^-1 is checked against an independent SciPy BDF + bounded least-squares reference. The final trajectory diagnostics and rejected integration-trial count are exposed in the fit result. This is an initial integration milestone, not broad certification for stiff reaction networks.
+
+
+The first stiff-fit fixture uses k1=800 s^-1 and k2=0.03 s^-1. Its SciPy BDF reference recovers 800.00000049 and 0.030000000018 s^-1 with weighted RSS 3.89e-14. The TypeScript adaptive implicit fitter passes parameter and prediction tolerances, returns solver diagnostics, and reports zero failed trial integrations. This is limited synthetic evidence; additional stiff mechanisms and tolerance-refinement studies remain necessary.
