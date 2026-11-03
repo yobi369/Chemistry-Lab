@@ -41,6 +41,7 @@ export interface QinModel4Fit {
   readonly sumSquaredResiduals: number;
   readonly weightedResidualSumSquares: number | null;
   readonly reducedChiSquare: number | null;
+  readonly reducedChiSquareConvention: 'weighted-residual-sum-of-squares/df' | 'unweighted-residual-sum-of-squares/df';
   readonly iterations: number;
   readonly converged: boolean;
   readonly standardErrors: Readonly<Record<string, number>> | null;
@@ -288,8 +289,10 @@ export function fitQinModel4(
     weighting: options.weighting, zeroStandardDeviationPolicy: options.zeroStandardDeviation,
     includedObservationCount, excludedZeroStandardDeviationCount, parameterCount, degreesOfFreedom,
     sumSquaredResiduals, weightedResidualSumSquares,
-    reducedChiSquare: weightedResidualSumSquares !== null && degreesOfFreedom > 0
-      ? weightedResidualSumSquares / degreesOfFreedom : null,
+    reducedChiSquare: degreesOfFreedom > 0
+      ? (weightedResidualSumSquares ?? sumSquaredResiduals) / degreesOfFreedom : null,
+    reducedChiSquareConvention: options.weighting === 'standard-deviation'
+      ? 'weighted-residual-sum-of-squares/df' : 'unweighted-residual-sum-of-squares/df',
     iterations, converged,
     standardErrors: statistics?.standardErrors ?? null,
     covarianceMatrix: statistics?.covarianceMatrix ?? null,
