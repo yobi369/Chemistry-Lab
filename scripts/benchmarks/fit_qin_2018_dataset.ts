@@ -72,6 +72,23 @@ const fit4GUnweighted = fitQinModel4('4G', candidateSeries, {
   weighting: 'unweighted', zeroStandardDeviation: 'unweighted',
   initialRatesByIronType: initialRates4G, initialSharedK1PerHour: 0.4719,
 });
+
+if (fit4LUnweighted.degreesOfFreedom !== 207 || fit4GUnweighted.degreesOfFreedom !== 211)
+  throw new Error('Qin Model 4 degrees-of-freedom reproduction failed.');
+if (Math.abs((fit4LUnweighted.reducedChiSquare ?? NaN) - 1.6) > 0.15)
+  throw new Error('Qin Model 4L reduced residual statistic does not reproduce the published 1.6.');
+if (Math.abs((fit4GUnweighted.reducedChiSquare ?? NaN) - 3.8) > 0.2)
+  throw new Error('Qin Model 4G reduced residual statistic does not reproduce the published 3.8.');
+const a4l = fit4LUnweighted.localAmplitudesMicromoles['35'];
+const a4g = fit4GUnweighted.localAmplitudesMicromoles['35'];
+if (Math.abs(a4l.A - 2.2245) > 0.05 || Math.abs(a4l.B - 20.5425) > 0.1 ||
+    Math.abs(fit4LUnweighted.rateConstantsPerHour.Alfa.k1PerHour - 0.4113) > 0.02 ||
+    Math.abs(fit4LUnweighted.rateConstantsPerHour.Alfa.k2PerHour - 0.0076) > 0.0002)
+  throw new Error('Qin Model 4L Alfa blank coefficients do not match Table S5.');
+if (Math.abs(a4g.A - 2.1025) > 0.05 || Math.abs(a4g.B - 19.8775) > 0.1 ||
+    Math.abs(fit4GUnweighted.rateConstantsPerHour.Alfa.k1PerHour - 0.4719) > 0.02 ||
+    Math.abs(fit4GUnweighted.rateConstantsPerHour.Alfa.k2PerHour - 0.0081) > 0.0002)
+  throw new Error('Qin Model 4G Alfa blank coefficients do not match Table S6.');
 console.log(JSON.stringify({
   source: '10.5281/zenodo.1979080',
   selection: 'candidate-inferred: t>0 for 28 non-CMC series; all 9 points for 7 CMC-nZVI series',
