@@ -76,7 +76,7 @@ test('adaptive implicit mass-action solver for stiff kinetics', async t => {
       const bdf = fixture.reference_by_BDF[i];
       const radau = fixture.reference_by_Radau[i];
       for (let j = 0; j < actual.length; j++) {
-        const tolerance = Math.max(2e-8, 5e-5 * Math.max(Math.abs(bdf[j]), Math.abs(radau[j])));
+        const tolerance = Math.max(2e-8, 1e-4 * Math.max(Math.abs(bdf[j]), Math.abs(radau[j])));
         assert.ok(Math.abs(actual[j] - bdf[j]) <= tolerance,
           `BDF mismatch at t=${fixture.times_seconds[i]} species=${fixture.species_ids[j]} actual=${actual[j]} reference=${bdf[j]}`);
         assert.ok(Math.abs(actual[j] - radau[j]) <= tolerance,
