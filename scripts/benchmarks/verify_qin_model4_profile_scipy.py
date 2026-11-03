@@ -265,7 +265,11 @@ for ts_result in ts_report["results"]:
         raise RuntimeError(
             f"{model} {parameter}: independent SciPy profile SSE mismatch "
             f"{max_relative_sse_difference:.3g} exceeds "
-            f"{MAX_RELATIVE_SSE_DIFFERENCE:.3g}."
+            f"{MAX_RELATIVE_SSE_DIFFERENCE:.3g}; "
+            f"TypeScript baseline={ts_result['baselineObjective']:.12g}, "
+            f"SciPy baseline={baseline['objective']:.12g}, "
+            f"worst grid TypeScript={max(ts_points, key=lambda p: abs(p['objective'] - scipy_points[ts_points.index(p)]['objective']))['objective']:.12g}, "
+            f"SciPy={scipy_points[max(range(len(ts_points)), key=lambda i: abs(ts_points[i]['objective'] - scipy_points[i]['objective']))]['objective']:.12g}."
         )
 
     components = connected_components(scipy_points, minimum, n)
