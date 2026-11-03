@@ -323,6 +323,11 @@ for ts_result in ts_report["results"]:
             f"{model} {parameter}: TypeScript/SciPy accepted-component count differs "
             f"({len(ts_intervals)} vs {len(scipy_intervals)})."
         )
+    # TypeScript selects its primary component by the optimizer's preferred
+    # basin, while SciPy discovers components in ascending grid order. Match
+    # components by their rate ranges before comparing endpoints/statuses.
+    ts_intervals = sorted(ts_intervals, key=lambda item: item["lowerPerHour"])
+    scipy_intervals = sorted(scipy_intervals, key=lambda item: item["lowerPerHour"])
     interval_differences = []
     for ts_interval, scipy_interval in zip(ts_intervals, scipy_intervals):
         for edge in ("lowerPerHour", "upperPerHour"):
@@ -331,7 +336,10 @@ for ts_result in ts_report["results"]:
             interval_differences.append(abs(a - b) / max(abs(a), abs(b), 1e-12))
         if ts_interval["boundaryLimited"] != scipy_interval["boundaryLimited"]:
             raise RuntimeError(
-                f"{model} {parameter}: boundary-limited classification differs."
+                f"{model} {parameter}: boundary-limited classification differs "
+                f"after rate-ordered component matching; "
+                f"TypeScript={ts_interval['boundaryLimited']}, "
+                f"SciPy={scipy_interval['boundaryLimited']}."
             )
     max_relative_interval_difference = max(interval_differences, default=0.0)
     if max_relative_interval_difference > MAX_RELATIVE_INTERVAL_DIFFERENCE:
