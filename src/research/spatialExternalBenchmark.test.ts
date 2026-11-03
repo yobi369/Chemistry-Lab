@@ -20,14 +20,15 @@ test('2-D finite-volume solver converges against independent SciPy BDF/Radau ref
    widthMeters,heightMeters,timeStepSeconds,steps,reactions:[],
    species:[{id:'A',diffusionCoefficientM2PerS,initialConcentrationMolPerM3:initial}],
   });
-  const exact=initial.map((row,y)=>row.map((_,x)=>
-   1+0.2*Math.cos(Math.PI*(x+0.5)*dx/widthMeters)*Math.cos(Math.PI*(y+0.5)*dy/heightMeters)*
-   Math.exp(-diffusionCoefficientM2PerS*Math.PI**2*(widthMeters**-2+heightMeters**-2)*timeSeconds)));
-  const continuumError=Math.max(...result.concentrationsMolPerM3.A.flatMap((row,y)=>
-   row.map((value,x)=>Math.abs(value-exact[y][x]))));
-  const explicitVsBdfError=mesh.maxAbsExplicitVsBdf;
-  assert.ok(Math.abs(continuumError-mesh.maxAbsBdfVsContinuum-explicitVsBdfError)<2e-7,
-   'Explicit-vs-continuum error should be consistent with independent BDF spatial error and explicit time error');
+  // The initial cosine is an eigenmode of the cell-centred Neumann finite-volume
+  // Laplacian. This closed-form semi-discrete solution is the exact ODE solution
+  // independently integrated by SciPy BDF and Radau.
+  const reference=initial.map((row,y)=>row.map((value,x)=>
+   1+(value-1)*mesh.bdfAmplitudeFactor));
+  const explicitVsBdfError=Math.max(...result.concentrationsMolPerM3.A.flatMap((row,y)=>
+   row.map((value,x)=>Math.abs(value-reference[y][x]))));
+  assert.ok(Math.abs(explicitVsBdfError-mesh.maxAbsExplicitVsBdf)<=Math.max(1e-10,mesh.maxAbsExplicitVsBdf*0.03),
+   cells+'x'+cells+' explicit solver error differs from independent SciPy BDF reference: '+explicitVsBdfError);
   assert.ok(mesh.maxAbsBdfRadau<3e-9,'Independent BDF and Radau references must agree');
   const total=result.concentrationsMolPerM3.A.flat().reduce((sum,value)=>sum+value,0);
   assert.ok(Math.abs(total-cells*cells)<1e-9,'No-flux diffusion must conserve spatial mass');
