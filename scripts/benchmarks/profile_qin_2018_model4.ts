@@ -74,14 +74,15 @@ function profile(model: QinModel4Variant, parameter: string) {
     }),
     profileEstimate,
   ])].sort((a, b) => a - b);
-  const evaluations = points.map(rate => {
+  const evaluateAt = (rate: number) => {
     const fit = fitQinModel4(model, series, {
       ...options(model, rates),
       fixedRateConstantsPerHour: { [parameter]: rate },
     });
     return { ratePerHour: rate, objective: fit.sumSquaredResiduals, converged: fit.converged,
       iterations: fit.iterations, warnings: fit.warnings };
-  });
+  };
+  const evaluations = points.map(evaluateAt);
   const profileMinimumObjective = Math.min(
     baseline.sumSquaredResiduals,
     ...evaluations.filter(point => point.converged).map(point => point.objective),
@@ -107,14 +108,40 @@ function profile(model: QinModel4Variant, parameter: string) {
   const bestPoint = withLikelihood.reduce((best, point) =>
     point.converged && (point.likelihoodRatioStatistic ?? Infinity) <
       (best.likelihoodRatioStatistic ?? Infinity) ? point : best, withLikelihood[0]);
-  const intervalFor = (pointsInComponent: typeof accepted) => ({
-    lowerPerHour: pointsInComponent[0].ratePerHour,
-    upperPerHour: pointsInComponent[pointsInComponent.length - 1].ratePerHour,
-    boundaryLimited: {
-      lower: pointsInComponent[0].ratePerHour === points[0],
-      upper: pointsInComponent[pointsInComponent.length - 1].ratePerHour === points[points.length - 1],
-    },
-  });
+  const refineCrossing = (outside: typeof withLikelihood[number], inside: typeof withLikelihood[number], side: 'lower' | 'upper') => {
+    let lo = Math.log(Math.min(outside.ratePerHour, inside.ratePerHour));
+    let hi = Math.log(Math.max(outside.ratePerHour, inside.ratePerHour));
+    for (let iteration = 0; iteration < 12; iteration++) {
+      const mid = (lo + hi) / 2;
+      const point = evaluateAt(Math.exp(mid));
+      const statistic = point.converged && point.objective > 0
+        ? Math.max(0, n * Math.log(point.objective / profileMinimumObjective)) : Infinity;
+      const isAccepted = statistic <= cutoff;
+      if (side === 'lower') {
+        if (isAccepted) hi = mid; else lo = mid;
+      } else {
+        if (isAccepted) lo = mid; else hi = mid;
+      }
+    }
+    return Math.exp((lo + hi) / 2);
+  };
+  const intervalFor = (pointsInComponent: typeof accepted) => {
+    const first = pointsInComponent[0], last = pointsInComponent[pointsInComponent.length - 1];
+    const firstIndex = withLikelihood.findIndex(p => p.ratePerHour === first.ratePerHour);
+    const lastIndex = withLikelihood.findIndex(p => p.ratePerHour === last.ratePerHour);
+    const lowerBoundaryLimited = firstIndex === 0;
+    const upperBoundaryLimited = lastIndex === withLikelihood.length - 1;
+    const lowerRefined = lowerBoundaryLimited ? first.ratePerHour :
+      refineCrossing(withLikelihood[firstIndex - 1], first, 'lower');
+    const upperRefined = upperBoundaryLimited ? last.ratePerHour :
+      refineCrossing(withLikelihood[lastIndex + 1], last, 'upper');
+    return {
+      lowerPerHour: lowerRefined, upperPerHour: upperRefined,
+      gridBracket: { lowerPerHour: first.ratePerHour, upperPerHour: last.ratePerHour },
+      boundaryLimited: { lower: lowerBoundaryLimited, upper: upperBoundaryLimited },
+      rootRefinementIterations: 12,
+    };
+  };
   const bestComponent = components.find(c => c.some(p => p.ratePerHour === bestPoint.ratePerHour));
   return {
     model, parameter, baselineEstimatePerHour: estimate,
@@ -141,7 +168,7 @@ console.log(JSON.stringify({
   intervalCalibration: 'Approximate Gaussian likelihood-ratio cutoff: n*ln(SSE_profile/SSE_min) <= chi-square(1, 0.95) = 3.84146, profiling an unknown common residual variance.',
   limitations: [
     'Grid endpoints are optimizer bounds; an interval reaching an endpoint is boundary-limited, not a closed confidence interval.',
-    'Grid interval endpoints are approximate and should be refined by root finding after bracketing.',
+    'Root-refined endpoints use 12 log-space bisection steps within the first grid bracket; inspect the archived profile curve and convergence flags.',
     'The LR calibration assumes independent homoscedastic Gaussian residuals and is not validated for this experimental dataset.',
     'The observation-selection convention remains inferred from published degrees of freedom and is not author-confirmed.',
   ],
