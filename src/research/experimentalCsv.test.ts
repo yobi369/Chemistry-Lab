@@ -23,7 +23,7 @@ test('imports series and preserves negative values, zero SD and source coordinat
 });
 
 test('accepts BOM, CRLF and quoted labels', () => {
-  const data = importQinTratnyek2018Csv('\uFEFF"#7, sample",,,\r\ntime_hr,H2_aver_uMol,H2_stdev\r\n1,2,0.3');
+  const data = importQinTratnyek2018Csv('\uFEFF"#7, sample",,\r\ntime_hr,H2_aver_uMol,H2_stdev\r\n1,2,0.3');
   assert.equal(data.measurements[0].experimentLabel, '#7, sample');
 });
 
