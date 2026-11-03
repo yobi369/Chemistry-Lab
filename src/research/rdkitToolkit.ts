@@ -6,7 +6,7 @@
  */
 export const RDKIT_VERSION = '2026.9.1';
 export const RDKIT_CDN_BASE = `https://cdn.jsdelivr.net/npm/@rdkit/rdkit@${RDKIT_VERSION}/dist/`;
-export const RDKIT_LOCAL_BASE = '/vendor/rdkit/';
+export const RDKIT_LOCAL_BASE = `/vendor/rdkit/${RDKIT_VERSION}/`;
 
 export interface RDKitMolecule {
   get_smiles(options?: string): string;
