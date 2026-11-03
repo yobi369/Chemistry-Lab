@@ -205,7 +205,7 @@ export function fitQinModel4(
   };
   let theta = [...initial], current = evaluate(theta), lambda = 1e-3, converged = (options.fixedRateConstantsPerHour !== undefined), iterations = 0;
   const jacobianAt = (point: readonly number[], base: readonly number[]) => {
-    const columns = point.map((value, j) => {
+    const columns = freeIndices.map(index => { const value = point[index], j = index;
       const step = 1e-4;
       const plus = [...point], minus = [...point];
       plus[j] = Math.min(Math.log(10), value + step);
