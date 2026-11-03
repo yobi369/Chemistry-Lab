@@ -59,6 +59,7 @@ function summarize(fit: QinAlternativeFit) {
     globalParameters: fit.rateParametersByIronType,
     alfaBlankLocalScale: fit.localScaleParameters['35'],
     identifiable: fit.locallyIdentifiable, conditionNumber: fit.informationConditionNumber,
+    alfaBlankStandardErrors: fit.standardErrors ? { localScale: fit.standardErrors['35.localScale'], k1PerHour: fit.standardErrors['Alfa.k1PerHour'], k2PerHour: fit.standardErrors['Alfa.k2PerHour'], ratio: fit.standardErrors['Alfa.ratio'] } : null,
     warnings: fit.warnings,
   };
 }
