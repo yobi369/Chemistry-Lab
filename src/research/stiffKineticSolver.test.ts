@@ -103,7 +103,7 @@ test('adaptive implicit mass-action solver for stiff kinetics', async t => {
         relativeTolerance, absoluteTolerance, maximumSteps: fixture.fit.maximum_steps,
       });
     const coarse = simulate(1e-3, 1e-9);
-    const tight = simulate(2e-7, 1e-13);
+    const tight = simulate(2e-8, 1e-14);
     const maxError = (result: ReturnType<typeof simulate>) => Math.max(...result.results.flatMap((row, i) =>
       fixture.species_ids.map((id: string, j: number) =>
         Math.abs(row.concentrations[id] - fixture.reference_by_BDF[i][j]))));
