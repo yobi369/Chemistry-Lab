@@ -75,3 +75,25 @@ The current fit set uses the 31 experimental conditions listed in published Mode
 - Plot per-parameter bootstrap distributions and check multimodality/asymmetry, especially for weakly identified rates.
 - Compare bootstrap intervals with the local covariance approximation and the paper's tabulated uncertainty where comparable.
 - Keep the inferred observation-set convention clearly labelled until author analysis files or an explicit selection rule are obtained.
+
+## Extended 500 × 3 experiment (1,500 resamples per model)
+
+The extended CI experiment completed successfully on the corrected 31-condition / 279-observation set. Each of the three seeds completed 500/500 fits for both models: **1,500/1,500 converged Model 4L fits and 1,500/1,500 converged Model 4G fits**, with zero failed replicates. Each seed exceeded the 95% convergence gate. The full raw-sample report is archived as `qin-model4-multiseed-bootstrap` in workflow run `41620562373` (commit `79b50905f139a3516d88addd7bc0d42ebba86ecc`).
+
+The most important result is persistent boundary mass, not a reassuringly narrow interval:
+
+| Model / parameter | Lower-bound hits | Frequency across 1,500 |
+|---|---:|---:|
+| 4L Beijing k2 | 919 | 61.3% |
+| 4L Hepure k2 | 644 | 42.9% |
+| 4L Toda k2 | 376 | 25.1% |
+| 4G Alfa k2 | 322 | 21.5% |
+| 4G Beijing k2 | 381 | 25.4% |
+| 4G Hepure k2 | 622 | 41.5% |
+| 4G CMC-nZVI k2 | 266 | 17.7% |
+
+Model 4L Toda k2 also reached the upper optimizer bound in 6/1,500 fits (0.4%). No other parameter had observed upper-bound hits. Model 4L Beijing k2 has its bootstrap median at the lower bound in all three seeds. Model 4G's shared k1 has no optimizer-bound hits, but its seed-specific 2.5th percentile is approximately 0.0434–0.0446 h^-1 while its median is approximately 0.4739–0.4754 h^-1, indicating a pronounced low-rate tail. Model 4L Hepure k1 also has a broad central interval: seed medians are approximately 0.401–0.414 h^-1 and upper endpoints approximately 0.670–0.686 h^-1.
+
+These results do **not** establish that the weak phase-2 rates are well identified. Increasing the number of resamples reduces Monte Carlo noise in the bootstrap summaries; it does not remove structural or practical non-identifiability in the experiment. The raw samples are retained so the empirical distributions can be plotted and inspected without relying only on percentile summaries.
+
+The 31-condition selection remains supported by Tables S5/S6 and the published degrees of freedom, but it is not directly confirmed by original author fitting files. Do not present these percentile intervals as calibrated confidence intervals without additional model and error-structure validation.
