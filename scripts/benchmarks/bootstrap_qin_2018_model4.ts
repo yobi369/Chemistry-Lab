@@ -82,6 +82,8 @@ function run(variant: QinModel4Variant) {
   if (!baseline.converged) throw new Error(variant + ' baseline fit did not converge.');
   const baselineValues = parameterValues(variant, baseline.rateConstantsPerHour);
   const samples: Record<string, number[]> = Object.fromEntries(Object.keys(baselineValues).map(key => [key, []]));
+  const lowerBoundHits: Record<string, number> = Object.fromEntries(Object.keys(baselineValues).map(key => [key, 0]));
+  const upperBoundHits: Record<string, number> = Object.fromEntries(Object.keys(baselineValues).map(key => [key, 0]));
   let convergedReplicates = 0, failedReplicates = 0;
   for (let replicate = 0; replicate < replicates; replicate++) {
     try {
@@ -89,7 +91,11 @@ function run(variant: QinModel4Variant) {
       if (!fit.converged) { failedReplicates++; continue; }
       const values = parameterValues(variant, fit.rateConstantsPerHour);
       if (Object.keys(samples).some(key => !Number.isFinite(values[key]))) { failedReplicates++; continue; }
-      for (const key of Object.keys(samples)) samples[key].push(values[key]);
+      for (const key of Object.keys(samples)) {
+        samples[key].push(values[key]);
+        if (values[key] <= 1e-8 * (1 + 1e-6)) lowerBoundHits[key]++;
+        if (values[key] >= 10 * (1 - 1e-6)) upperBoundHits[key]++;
+      }
       convergedReplicates++;
     } catch {
       failedReplicates++;
@@ -102,6 +108,10 @@ function run(variant: QinModel4Variant) {
   return {
     baselineObjective: baseline.sumSquaredResiduals,
     baselineRates: baselineValues,
+    baselineWarnings: baseline.warnings,
+    parameterBounds: { lower: 1e-8, upper: 10, units: 'h^-1' },
+    lowerBoundHitCounts: lowerBoundHits,
+    upperBoundHitCounts: upperBoundHits,
     intervals95: Object.fromEntries(Object.entries(samples).map(([key, values]) =>
       [key, summarizeBootstrap(values, baselineValues[key], minimum)])),
     requestedReplicates: replicates, convergedReplicates, failedReplicates,
