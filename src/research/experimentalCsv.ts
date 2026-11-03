@@ -1,5 +1,3 @@
-import { SimulationInputError } from './gillespie';
-
 export interface ExperimentalMeasurement {
   readonly experimentId: string;
   readonly experimentLabel: string;
