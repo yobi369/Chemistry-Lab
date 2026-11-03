@@ -33,36 +33,17 @@ The multi-seed report records each seed's Model 4L and 4G percentile intervals, 
 
 The quality workflow keeps the 20-replicate smoke test and additionally runs the 200-replicate, three-seed experiment, archiving the complete JSON report. This produces 600 resamples per model across independent seeded streams. Review each seed separately: a stable median with unstable upper endpoints, repeated lower-bound hits, or substantial convergence failures still indicates weak identification.
 
-## Latest archived three-seed result
+## Superseded observation-set run
 
-The CI experiment completed with 200 requested replicates for each of three seeds (600 requested fits per model):
-
-- Model 4L: 600/600 converged.
-- Model 4G: 597/600 converged; 3 failures were retained in the report.
-
-Lower-bound hits across the 600 requested replicates:
-
-| Model / parameter | Lower-bound hits | Frequency |
-|---|---:|---:|
-| 4L Beijing k2 | 345 / 600 | 57.5% |
-| 4L Hepure k2 | 260 / 600 | 43.3% |
-| 4L Toda k2 | 151 / 600 | 25.2% |
-| 4G Alfa k2 | 142 / 600 | 23.7% |
-| 4G Beijing k2 | 164 / 600 | 27.3% |
-| 4G Hepure k2 | 262 / 600 | 43.7% |
-| 4G CMC-nZVI k2 | 102 / 600 | 17.0% |
-
-The seed-to-seed relative spread of the 97.5th percentile endpoint was 28.6% for 4L Hepure k2 and 23.6% for 4G Hepure k2. For 4L Beijing k2, the median was at the lower optimizer bound in all three seeds. These are direct signs of weak or boundary-limited identification, not evidence that the bootstrap has failed. The three Model 4G non-convergences are visible in the archived report and were not silently counted as successful samples.
-
-The full report is archived by the GitHub Actions artifact named qin-model4-multiseed-bootstrap. Seed-specific intervals remain separate; the across-seed ranges are diagnostics and must not be treated as additional confidence intervals.
+An earlier 200-replicate, three-seed experiment used a reconstructed 35-series / 287-point set. The later audit of the original Tables S5/S6 showed that those tables list 31 local Model 4 conditions, not 35. The earlier bootstrap artifact is retained for traceability but is superseded and must not be used as the primary Model 4 uncertainty report. The 200-replicate, three-seed experiment is being rerun on the 31-condition / 279-observation set.
 
 ## Interpretation and limitations
 
 This is a **stratified experimental-condition cluster bootstrap**, not a residual bootstrap, parametric measurement-error bootstrap, profile likelihood, or Bayesian posterior. It measures how the fitted rate estimates vary when the available experimental conditions are resampled within each iron type. It preserves within-series time dependence and each selected series' observed time grid, but does not generate new measurement noise.
 
-The 35 experimental conditions are a small and uneven sample of material/treatment combinations. The bootstrap cannot create information absent from the experiment, and it does not resolve structural non-identifiability. Weakly identified Beijing/Hepure phase-2 rates may yield asymmetric, broad, multimodal or boundary-limited distributions. A percentile interval should not be interpreted as a calibrated confidence interval when the bootstrap distribution is unstable or too few replicates converge.
+The 31 published Model 4 conditions are a small and uneven sample of material/treatment combinations. The bootstrap cannot create information absent from the experiment, and it does not resolve structural non-identifiability. Weakly identified Beijing/Hepure phase-2 rates may yield asymmetric, broad, multimodal or boundary-limited distributions. A percentile interval should not be interpreted as a calibrated confidence interval when the bootstrap distribution is unstable or too few replicates converge.
 
-The fit set remains a documented reconstruction: all non-zero-time observations plus the seven CMC-nZVI time-zero records. This produces the published degrees of freedom, but has not been confirmed against original author fitting files. The bootstrap inherits that uncertainty.
+The current fit set uses the 31 experimental conditions listed in published Model 4 Tables S5/S6, excluding raw series #64, #65, #68 and #69 (CMC-nZVI dithionite/thiosulfite conditions) and retaining all nine time points in each selected condition (279 observations). This matches the published local-condition tables and degrees of freedom. The paper/SI do not explicitly publish a row-level inclusion list or original fitting project, so the selection is strongly supported by public evidence but is not directly author-confirmed.
 
 ## Required review before scientific reporting
 
