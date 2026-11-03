@@ -56,29 +56,12 @@ Zero-SD observations are not assigned infinite weight. The caller must explicitl
 
 ## Current validation boundary
 
-The CI pipeline now downloads the exact Zenodo CSV, verifies its published MD5, and parses all 35 series / 315 measurements. The paper-compatible fit selection is reconstructed as all non-zero-time observations plus the seven CMC-nZVI time-zero observations (287 points total). This gives 207 degrees of freedom for 4L and 211 for 4G, exactly as reported. The selection is inferred from the published degrees of freedom and cross-checked against Tables S5/S6; the source paper does not appear to state this filtering rule explicitly.\n\nOn this reconstructed set, the unweighted fit gives 4L SSE/df = 1.623 (paper: 1.6) and 4G SSE/df = 3.876 (paper: 3.8). The Alfa control-series coefficients also reproduce the published tables to their reported precision. The fit code returns local covariance diagnostics, but some iron-type rates remain weakly identifiable or rank-deficient, consistent with the paper's discussion of Beijing/Hepure parameter uncertainty. The SD-weighted sensitivity fit does not reproduce the paper's results and must not be presented as the reference reproduction.
+The CI pipeline now downloads the exact Zenodo CSV, verifies its published MD5, and parses all 35 series / 315 measurements. The paper-compatible fit selection is reconstructed as all non-zero-time observations plus the seven CMC-nZVI time-zero observations (287 points total). This gives 207 degrees of freedom for 4L and 211 for 4G, exactly as reported. The selection is inferred from the published degrees of freedom and cross-checked against Tables S5/S6; the source paper does not appear to state this filtering rule explicitly.\n\nOn the Model 4 set, the unweighted fit gives 4L SSE/df = 1.623 (paper: 1.6; df 207) and 4G SSE/df = 3.876 (paper: 3.8; df 211). Alfa control-series coefficients reproduce Tables S5/S6 to reported precision; Toda and CMC rate groups also closely reproduce their tabulated values. Beijing/Hepure phase-2 rates remain weakly identified, consistent with the authors' reported large uncertainties.\n\nModels 1–3 were also fitted to the 31-condition / 279-point set represented in Tables S2–S4. Their unweighted SSE/df values are 44.787 (paper: 45; df 243), 7.156 (paper: 7.2; df 238), and 5.329 (paper: 5.3; df 233), respectively. Alfa control-series coefficients reproduce Tables S2–S4. The four additional CMC-nZVI dithionite/thiosulfate conditions appear in the Model 4 table set but not in Tables S2–S4; this model-specific coverage is encoded explicitly in the real-data CI benchmark.\n\nThe SD-weighted sensitivity fit produces materially different coefficients and a reduced weighted residual statistic near 172, so it is retained only as a sensitivity analysis, not as the reference reproduction. The local covariance code returns diagnostics; some fit matrices are ill-conditioned or rank-deficient, so standard errors are withheld rather than fabricated.
 
 ## Next validation gates
 
-1. Make the checksum-pinned raw CSV reliably available and run all 35 series through the importer and fitter.
-2. Confirm exact weighting, inclusion/exclusion and residual degrees-of-freedom conventions from the supporting information.
-3. Compare 4L/4G rates, local amplitudes, reduced χ² and degrees of freedom against the published Tables S5/S6 and Table 1.
-4. Add full joint covariance, standard errors, parameter correlations, profile-likelihood or bootstrap checks for weakly identified rates.
-5. Implement Models 1–3 and reproduce the four-model comparison, not only the preferred Model 4.
-6. Add independent SciPy least_squares fitting and compare predictions, objective and parameter estimates against the TypeScript implementation.
-
-## Models 1–3 now implemented
-
-The same fitting API exposes the earlier alternatives described in the article:
-
-- **Model 1 — uniform passivation:** one exponential appearance term, A(1 − exp(−kt)); k is global by iron type and A is local.
-- **Model 2 — replacement:** a zero-order linear term plus an exponential term, C[t + (r − 1)(1 − exp(−kt))/k], where C = S₁,₀·kH₂,₂ and r = kH₂,₁/kH₂,₂; k and r are global by iron type, C is local.
-- **Model 3 — advanced phase replacement:** the integrated two-step sequence S₁ → S₂ → inactive products, with k₁, k₂ and r global by iron type and C local. The implementation uses the analytic equal-rate limit to avoid cancellation when k₁ ≈ k₂.
-
-All three implementations are currently covered by synthetic parameter-recovery tests. They are not yet fitted to the Zenodo observations; no paper-comparison statistics are claimed.
-
-## Local uncertainty diagnostics
-
-All four model fit results now expose a finite-difference sensitivity Jacobian diagnostic, local covariance matrix, parameter standard errors, parameter correlation matrix, identifiable rank and information condition number when the residual degrees of freedom are positive and the local information matrix is full rank. Singular or rank-deficient fits return null covariance/standard errors and an explicit warning instead of fabricated precision estimates.
-
-For unweighted fits, covariance is scaled by residual SSE divided by residual degrees of freedom. For standard-deviation-weighted fits, the supplied SDs are treated as fixed known observation uncertainties and covariance uses the inverse weighted information matrix without additional residual scaling. This is a local linear approximation; it does not replace profile likelihood, bootstrap or Bayesian uncertainty analysis, and the small replicate count behind some SD estimates remains a limitation.
+1. Vendor the checksum-verified CSV so reproducible validation does not depend on Zenodo availability; CI currently downloads it and verifies the published MD5 before every real-data fit.
+2. Independently confirm the inferred model-specific observation sets against author fitting files if they can be obtained; the current selections are supported by the exact published degrees of freedom and coefficient/statistic reproduction.
+3. Improve multi-start and identifiability handling for weakly constrained Beijing/Hepure phase-2 parameters, preserving non-unique minima and wide uncertainty.
+4. Validate local covariance against the paper's tabulated standard errors and add profile-likelihood/bootstrap intervals for weakly identified parameters.
+5. Add an independent SciPy implementation of all four Qin global fits and compare fitted curves, SSE, global rates, local amplitudes and residual diagnostics against the TypeScript implementation.
