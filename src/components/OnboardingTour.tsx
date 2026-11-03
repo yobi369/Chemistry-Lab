@@ -136,6 +136,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
           </div>
 
           <button
+            type="button"
+            aria-label="Close onboarding tour"
             onClick={onClose}
             className="p-1 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
           >
