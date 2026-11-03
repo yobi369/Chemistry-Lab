@@ -4,7 +4,7 @@ import { createSeededRandom, summarizeBootstrap } from '../../src/research/boots
 import { fitQinModel4, inferQinIronType, QinExperimentSeries, QinModel4Variant } from '../../src/research/qinHydrogenModel';
 
 const path = process.argv[2];
-if (!path) throw new Error('Usage: bun run scripts/benchmarks/bootstrap_qin_2018_model4.ts <csv-path> [replicates=40] [seed=20261103]');
+if (!path) throw new Error('Usage: bun run scripts/benchmarks/bootstrap_qin_2018_model4_multiseed.ts <csv-path> [replicates=200] [seed1,seed2,...]');
 const replicates = Number(process.argv[3] ?? 40);
 const seeds = (process.argv[4] ?? '20261103,20261104,20261105').split(',').map(Number);
 if (!Number.isSafeInteger(replicates) || replicates < 200 || replicates > 500)
