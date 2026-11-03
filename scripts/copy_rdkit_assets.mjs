@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = path.join(root, 'node_modules', '@rdkit', 'rdkit', 'dist');
-const destination = path.join(root, 'public', 'vendor', 'rdkit');
+const destination = path.join(root, 'public', 'vendor', 'rdkit', '2026.9.1');
 const required = process.env.CI === 'true' || process.env.VERCEL === '1' || process.env.REQUIRE_RDKIT_LOCAL_ASSETS === '1';
 
 let entries;
