@@ -33,3 +33,8 @@ The automated stiff-system tests express the Robertson (1966) problem as three m
 - It does not add temperature coupling, energy balances, pressure dependence, non-ideal activities, or spatial transport.
 
 A successful Robertson comparison is evidence for this tested mechanism and tolerance range only; it is not certification for arbitrary stiff chemical systems.
+
+
+## Adaptive fitting reference result
+
+The synthetic sequential fit contains 39 species/time observations over 13 times from 0 to 100 s, with k1=800 s^-1 and k2=0.03 s^-1. The independent SciPy 1.17.0 BDF + bounded least-squares reference recovered k1=800.00000049 s^-1 and k2=0.030000000018 s^-1, with weighted RSS 3.89e-14. The TypeScript adaptive implicit fit passes the configured recovery tolerances (0.1 s^-1 for k1 and 1e-5 s^-1 for k2), keeps every fitted prediction within 5e-5 concentration units of the reference observations, and returns non-empty solver diagnostics with zero failed integration trials. The independent Python reference output is archived in the GitHub Actions artifact named stiff-kinetic-fit-scipy-reference.
