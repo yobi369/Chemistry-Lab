@@ -108,6 +108,14 @@ jobs:
           name: stiff-reversible-slow-drain-scipy-reference
           path: /tmp/stiff-reversible-slow-drain-scipy.json
           retention-days: 30
+      - name: Verify 2-D diffusion mesh convergence against independent SciPy BDF and Radau
+        run: python scripts/benchmarks/verify_spatial2d_mesh_convergence.py > /tmp/spatial2d-mesh-convergence.json
+      - name: Archive independent 2-D diffusion mesh convergence report
+        uses: actions/upload-artifact@v4
+        with:
+          name: spatial2d-scipy-mesh-convergence
+          path: /tmp/spatial2d-mesh-convergence.json
+          retention-days: 30
       - name: Reproduce independent BDF and Radau reference fixtures
         run: python scripts/benchmarks/verify_scipy_references.py
       - name: Verify independent nonlinear kinetic fitting benchmark
