@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { fitMassActionMechanism } from './nonlinearKineticFitting';
 
 const sequential = {
@@ -64,5 +65,43 @@ test('multi-step nonlinear mass-action kinetic fitting', async t => {
       {timeSeconds:1,speciesId:'A',value:0.5},
       {timeSeconds:2,speciesId:'A',value:0.2},
     ]),/standard deviations for all/);
+  });
+
+  await t.test('matches the pinned SciPy reference on the shared weighted-observation fixture', () => {
+    const fixture = JSON.parse(readFileSync(new URL('../../scripts/benchmarks/fixtures/sequential-kinetic-fit.json', import.meta.url), 'utf8'));
+    const mechanism = {
+      speciesIds: fixture.species_ids,
+      initialConcentrations: fixture.initial_concentrations,
+      reactions: [
+        {id:'k1',reactants:[{speciesId:'A',coefficient:1}],products:[{speciesId:'B',coefficient:1}]},
+        {id:'k2',reactants:[{speciesId:'B',coefficient:1}],products:[{speciesId:'C',coefficient:1}]},
+      ],
+    };
+    const observations = fixture.times_seconds.flatMap((timeSeconds: number, timeIndex: number) =>
+      fixture.species_ids.map((speciesId: string, speciesIndex: number) => ({
+        timeSeconds,
+        speciesId,
+        value: fixture.observed_concentrations[timeIndex][speciesIndex],
+        standardDeviation: fixture.standard_deviation,
+      })),
+    );
+    const parameters = ['k1','k2'].map((reactionId, index) => ({
+      reactionId,
+      initialGuess: fixture.typescript_fit.initial_guess[index],
+      lowerBound: fixture.parameter_bounds.lower[index],
+      upperBound: fixture.parameter_bounds.upper[index],
+      units: 's^-1',
+    }));
+    const fit = fitMassActionMechanism(mechanism, parameters, observations, {
+      maxIntegrationStepSeconds: fixture.typescript_fit.max_integration_step_seconds,
+      maxIterations: fixture.typescript_fit.max_iterations,
+      convergenceTolerance: fixture.typescript_fit.convergence_tolerance,
+    });
+    const scipy = fixture.scipy_reference;
+    assert.equal(fit.converged, true, fit.warnings.join('; '));
+    assert.equal(fit.locallyIdentifiable, true);
+    assert.ok(Math.abs(fit.parameterEstimates.k1-scipy.parameters.k1) <= fixture.typescript_fit.parameter_tolerance);
+    assert.ok(Math.abs(fit.parameterEstimates.k2-scipy.parameters.k2) <= fixture.typescript_fit.parameter_tolerance);
+    assert.ok(Math.abs(fit.weightedResidualSumSquares-scipy.weighted_residual_sum_squares) <= fixture.typescript_fit.weighted_rss_tolerance);
   });
 });

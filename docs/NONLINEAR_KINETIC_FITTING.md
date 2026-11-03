@@ -33,8 +33,12 @@ Local identifiability is assessed from a re-orthogonalized numerical rank estima
 Do not interpret a successful fit as proof that the reaction mechanism is chemically correct.
 
 
-## Independent optimizer reference benchmark
+## Cross-language reference parity
 
-CI also runs `scripts/benchmarks/verify_scipy_kinetic_fit.py` with pinned SciPy 1.17.0. It fits a deterministic, mildly perturbed sequential A → B → C time course using SciPy's bounded trust-region reflective `least_squares` implementation from four distinct initial guesses. The benchmark checks convergence consistency and recovery of the generating rate constants within 0.003 s⁻¹.
+CI uses the shared fixture at `scripts/benchmarks/fixtures/sequential-kinetic-fit.json` for both implementations. It contains the same sequential A → B → C mechanism, deterministic perturbed concentration observations, per-observation standard deviation, parameter bounds, and initial guesses.
 
-This is an independent reference-model/optimizer benchmark, not a direct execution of the TypeScript fitter and not validation against experimental or published measurements. The TypeScript fitter continues to be covered by its own synthetic recovery, weighting, and identifiability tests. Experimental-data validation and cross-language fixture parity remain open.
+- The SciPy 1.17.0 reference uses bounded trust-region reflective `least_squares` from four initial guesses and checks multi-start stability against pinned reference estimates and weighted residual sum of squares.
+- The TypeScript test loads that exact fixture and runs `fitMassActionMechanism` with the same observations, uncertainties, bounds, and integration settings.
+- The TypeScript result must converge, report local identifiability, and agree with the pinned SciPy estimates and weighted residual sum of squares within explicit fixture tolerances.
+
+This is a controlled synthetic cross-implementation regression test, not validation against experimental or published measurements. It currently covers one sequential first-order mechanism and does not establish parity for arbitrary reaction orders, stiff systems, competing pathways, or all optimizer starting conditions. Do not interpret agreement on this fixture as proof that a reaction mechanism is chemically correct.
