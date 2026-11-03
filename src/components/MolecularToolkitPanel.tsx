@@ -18,7 +18,7 @@ export const MolecularToolkitPanel: React.FC = () => {
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h4 className="text-sm font-semibold">RDKit molecular identity & stereochemistry</h4>
-        <p className="mt-1 max-w-3xl text-[11px] leading-5 text-zinc-500">Official RDKit.js WebAssembly toolkit. Parsing and sanitization are performed by RDKit; canonical isomeric SMILES, InChI and InChIKey are generated locally in this browser.</p>
+        <p className="mt-1 max-w-3xl text-[11px] leading-5 text-zinc-500">Official RDKit.js WebAssembly toolkit. Parsing and sanitization are performed by RDKit in an isolated same-origin Web Worker; canonical isomeric SMILES, InChI and InChIKey are generated locally in this browser.</p>
       </div>
       <span className="rounded-full border border-emerald-800 px-2 py-1 font-mono text-[10px] text-emerald-300">RDKit { '2026.9.1' }</span>
     </div>
