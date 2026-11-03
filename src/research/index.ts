@@ -21,3 +21,4 @@ export * from './reactionDiffusion1D';
 export * from './reactionDiffusion2D';
 export * from './correlatedKineticUncertainty';
 export * from './stiffKineticSolver';
+export * from './experimentalCsv';
