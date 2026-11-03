@@ -31,3 +31,10 @@ Local identifiability is assessed from a re-orthogonalized numerical rank estima
 - The implementation has synthetic recovery and rank-deficiency tests, but has not yet been compared with an external fitting package or published kinetic datasets.
 
 Do not interpret a successful fit as proof that the reaction mechanism is chemically correct.
+
+
+## Independent optimizer reference benchmark
+
+CI also runs `scripts/benchmarks/verify_scipy_kinetic_fit.py` with pinned SciPy 1.17.0. It fits a deterministic, mildly perturbed sequential A → B → C time course using SciPy's bounded trust-region reflective `least_squares` implementation from four distinct initial guesses. The benchmark checks convergence consistency and recovery of the generating rate constants within 0.003 s⁻¹.
+
+This is an independent reference-model/optimizer benchmark, not a direct execution of the TypeScript fitter and not validation against experimental or published measurements. The TypeScript fitter continues to be covered by its own synthetic recovery, weighting, and identifiability tests. Experimental-data validation and cross-language fixture parity remain open.
