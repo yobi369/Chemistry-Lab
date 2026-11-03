@@ -78,7 +78,7 @@ function profile(model: QinModel4Variant, parameter: string) {
   // multi-start conditional refits and retain the lowest converged SSE.
   // This is profile-only; it does not alter the production model fitter.
   const rateKeys = Object.keys(rates) as (keyof typeof rates)[];
-  const seedVariants = Array.from({ length: 9 }, (_, seed) => {
+  const makeSeedVariants = (baseRates: typeof rates) => Array.from({ length: 9 }, (_, seed) => {
     const factor = (index: number) => {
       if (seed === 0) return 1;
       if (seed === 1) return index % 2 === 0 ? 0.1 : 10;
@@ -90,17 +90,23 @@ function profile(model: QinModel4Variant, parameter: string) {
       if (seed === 7) return 0.3;
       return 3;
     };
-    const variant = Object.fromEntries(rateKeys.map((type, index) => {
-      const base = rates[type];
+    return Object.fromEntries(rateKeys.map((type, index) => {
+      const base = baseRates[type];
       return [type, {
         k1PerHour: Math.min(10, Math.max(1e-8, base.k1PerHour * factor(index * 2))),
         k2PerHour: Math.min(10, Math.max(1e-8, base.k2PerHour * factor(index * 2 + 1))),
       }];
     })) as typeof rates;
-    return variant;
   });
+  // Continue from the best conditional solution at the preceding grid point,
+  // while retaining the original baseline starts to reduce path dependence.
+  let continuationRates = rates;
   const evaluateAt = (rate: number) => {
     let best: ReturnType<typeof fitQinModel4> | null = null;
+    const seedVariants = [
+      ...makeSeedVariants(rates),
+      ...makeSeedVariants(continuationRates).slice(0, 5),
+    ];
     for (const seed of seedVariants) {
       const fit = fitQinModel4(model, series, {
         ...options(model, seed),
@@ -109,6 +115,7 @@ function profile(model: QinModel4Variant, parameter: string) {
       if (fit.converged && (!best || fit.sumSquaredResiduals < best.sumSquaredResiduals))
         best = fit;
     }
+    if (best) continuationRates = startsFromFit(best);
     if (!best) {
       const fallback = fitQinModel4(model, series, {
         ...options(model, rates),
