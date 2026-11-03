@@ -9,6 +9,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const dist = path.join(root, 'dist');
 const vercelConfig = JSON.parse(await readFile(path.join(root, 'vercel.json'), 'utf8'));
 const commonHeaders = Object.fromEntries(vercelConfig.headers[0].headers.map(header => [header.key, header.value]));
+const rdkitWorkerRule = vercelConfig.headers.find(rule => rule.source === '/rdkit-worker.js');
+if (!rdkitWorkerRule) throw new Error('Vercel configuration must define a dedicated RDKit worker CSP.');
+const rdkitWorkerHeaders = Object.fromEntries(rdkitWorkerRule.headers.map(header => [header.key, header.value]));
 const mime = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -36,7 +39,7 @@ const server = createServer(async (request, response) => {
     }
     const body = await readFile(file);
     response.writeHead(200, {
-      ...commonHeaders,
+      ...(pathname === '/rdkit-worker.js' ? rdkitWorkerHeaders : commonHeaders),
       'Content-Type': mime[path.extname(file)] ?? 'application/octet-stream',
       ...(pathname === '/sw.js' ? { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' } : {}),
       ...(pathname.startsWith('/vendor/rdkit/') ? { 'Cache-Control': 'public, max-age=31536000, immutable' } : {}),
