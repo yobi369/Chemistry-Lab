@@ -29,7 +29,7 @@ The rate search spans the fitter's hard bounds, 1e-8 to 10 h^-1. If an accepted 
 
 ## Data-selection caveat
 
-The benchmark inherits the candidate Model 4 set of 35 experimental series and 287 observations (non-zero-time observations, except that the CMC-nZVI time-zero records are retained). This reconstruction reproduces the published degrees of freedom and fit statistics but has not been confirmed against the original authors' fitting files or an explicit observation-selection rule. The profile analysis cannot resolve that provenance question.
+The benchmark now uses the 31 experimental conditions listed in published Model 4 Tables S5/S6, excluding raw series #64, #65, #68 and #69 (CMC-nZVI dithionite/thiosulfite conditions) and retaining all nine time points for each selected condition: 279 observations. This selection reproduces the published 4L/4G degrees of freedom and rounded reduced chi-square values. The paper and SI do not explicitly publish a row-level inclusion list or original fitting project, so this is the strongest public-evidence reconstruction, not direct author confirmation.
 
 ## Interpretation requirements
 
