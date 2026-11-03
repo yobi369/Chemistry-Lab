@@ -41,6 +41,9 @@ jobs:
       - name: Fit Qin Models 4L and 4G against candidate paper observation set
         if: steps.qin_data.outcome == 'success'
         run: bun run scripts/benchmarks/fit_qin_2018_dataset.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
+      - name: Fit Qin Models 1 to 3 against original experimental series
+        if: steps.qin_data.outcome == 'success'
+        run: bun run scripts/benchmarks/fit_qin_2018_models_1_to_3.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
       - name: Report temporary unavailability of the external Zenodo source
         if: steps.qin_data.outcome != 'success'
         run: echo "::warning::Zenodo did not serve the versioned Qin dataset; the real-data audit was skipped. The checksum-pinned download and audit remain reproducible locally."
