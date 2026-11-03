@@ -73,13 +73,52 @@ function profile(model: QinModel4Variant, parameter: string) {
     }),
     profileEstimate,
   ])].sort((a, b) => a - b);
+  // The damped least-squares fitter can settle in a local basin when a
+  // profiled rate is far from its baseline estimate. Use deterministic
+  // multi-start conditional refits and retain the lowest converged SSE.
+  // This is profile-only; it does not alter the production model fitter.
+  const rateKeys = Object.keys(rates) as (keyof typeof rates)[];
+  const seedVariants = Array.from({ length: 9 }, (_, seed) => {
+    const factor = (index: number) => {
+      if (seed === 0) return 1;
+      if (seed === 1) return index % 2 === 0 ? 0.1 : 10;
+      if (seed === 2) return index % 2 === 0 ? 10 : 0.1;
+      if (seed === 3) return 0.1;
+      if (seed === 4) return 10;
+      if (seed === 5) return index % 2 === 0 ? 0.03 : 3;
+      if (seed === 6) return index % 2 === 0 ? 3 : 0.03;
+      if (seed === 7) return 0.3;
+      return 3;
+    };
+    const variant = Object.fromEntries(rateKeys.map((type, index) => {
+      const base = rates[type];
+      return [type, {
+        k1PerHour: Math.min(10, Math.max(1e-8, base.k1PerHour * factor(index * 2))),
+        k2PerHour: Math.min(10, Math.max(1e-8, base.k2PerHour * factor(index * 2 + 1))),
+      }];
+    })) as typeof rates;
+    return variant;
+  });
   const evaluateAt = (rate: number) => {
-    const fit = fitQinModel4(model, series, {
-      ...options(model, rates),
-      fixedRateConstantsPerHour: { [parameter]: rate },
-    });
-    return { ratePerHour: rate, objective: fit.sumSquaredResiduals, converged: fit.converged,
-      iterations: fit.iterations, warnings: fit.warnings };
+    let best: ReturnType<typeof fitQinModel4> | null = null;
+    for (const seed of seedVariants) {
+      const fit = fitQinModel4(model, series, {
+        ...options(model, seed),
+        fixedRateConstantsPerHour: { [parameter]: rate },
+      });
+      if (fit.converged && (!best || fit.sumSquaredResiduals < best.sumSquaredResiduals))
+        best = fit;
+    }
+    if (!best) {
+      const fallback = fitQinModel4(model, series, {
+        ...options(model, rates),
+        fixedRateConstantsPerHour: { [parameter]: rate },
+      });
+      return { ratePerHour: rate, objective: fallback.sumSquaredResiduals,
+        converged: false, iterations: fallback.iterations, warnings: fallback.warnings };
+    }
+    return { ratePerHour: rate, objective: best.sumSquaredResiduals, converged: true,
+      iterations: best.iterations, warnings: best.warnings };
   };
   const evaluations = points.map(evaluateAt);
   const profileMinimumObjective = Math.min(
