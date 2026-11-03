@@ -29,17 +29,49 @@ const candidateSeries = allSeries.map(s => ({
 const candidateCount = candidateSeries.reduce((n, s) => n + s.observations.length, 0);
 if (candidateCount !== 287) throw new Error('Candidate selection expected 287 points from published df arithmetic; got ' + candidateCount);
 const initialRatesByIronType = {
-  Alfa: { k1PerHour: 0.41, k2PerHour: 0.0076 },
-  Beijing: { k1PerHour: 0.13, k2PerHour: 0.0008 },
-  Hepure: { k1PerHour: 0.2, k2PerHour: 0.005 },
-  Toda: { k1PerHour: 0.2, k2PerHour: 0.003 },
-  'CMC-nZVI': { k1PerHour: 0.4, k2PerHour: 0.01 },
+  Alfa: { k1PerHour: 0.4113, k2PerHour: 0.0076 },
+  Beijing: { k1PerHour: 0.1338, k2PerHour: 0.0008 },
+  Hepure: { k1PerHour: 0.4575, k2PerHour: 0.0010 },
+  Toda: { k1PerHour: 0.0358, k2PerHour: 0.0054 },
+  'CMC-nZVI': { k1PerHour: 0.4838, k2PerHour: 0.0117 },
 };
-const options = { weighting: 'standard-deviation' as const, zeroStandardDeviation: 'unweighted' as const, initialRatesByIronType };
-const fit4L = fitQinModel4('4L', candidateSeries, options);
-const fit4G = fitQinModel4('4G', candidateSeries, { ...options, initialSharedK1PerHour: 0.4 });
-const alfaBlank4L = fit4L.localAmplitudesMicromoles['35'];
-const alfaBlank4G = fit4G.localAmplitudesMicromoles['35'];
+const initialRates4G = {
+  Alfa: { k1PerHour: 0.4719, k2PerHour: 0.0081 },
+  Beijing: { k1PerHour: 0.4719, k2PerHour: 0.0032 },
+  Hepure: { k1PerHour: 0.4719, k2PerHour: 0.0009 },
+  Toda: { k1PerHour: 0.4719, k2PerHour: 0.0170 },
+  'CMC-nZVI': { k1PerHour: 0.4719, k2PerHour: 0.0114 },
+};
+function summarize(fit: ReturnType<typeof fitQinModel4>) {
+  return {
+    converged: fit.converged, iterations: fit.iterations,
+    parameterCount: fit.parameterCount, degreesOfFreedom: fit.degreesOfFreedom,
+    sumSquaredResiduals: fit.sumSquaredResiduals,
+    weightedResidualSumSquares: fit.weightedResidualSumSquares,
+    reducedChiSquare: fit.reducedChiSquare,
+    ratesByIronType: fit.rateConstantsPerHour,
+    alfaBlank: fit.localAmplitudesMicromoles['35'],
+    identifiable: fit.locallyIdentifiable,
+    conditionNumber: fit.informationConditionNumber,
+    warnings: fit.warnings,
+  };
+}
+const fit4LWeighted = fitQinModel4('4L', candidateSeries, {
+  weighting: 'standard-deviation', zeroStandardDeviation: 'unweighted',
+  initialRatesByIronType,
+});
+const fit4GWeighted = fitQinModel4('4G', candidateSeries, {
+  weighting: 'standard-deviation', zeroStandardDeviation: 'unweighted',
+  initialRatesByIronType: initialRates4G, initialSharedK1PerHour: 0.4719,
+});
+const fit4LUnweighted = fitQinModel4('4L', candidateSeries, {
+  weighting: 'unweighted', zeroStandardDeviation: 'unweighted',
+  initialRatesByIronType,
+});
+const fit4GUnweighted = fitQinModel4('4G', candidateSeries, {
+  weighting: 'unweighted', zeroStandardDeviation: 'unweighted',
+  initialRatesByIronType: initialRates4G, initialSharedK1PerHour: 0.4719,
+});
 console.log(JSON.stringify({
   source: '10.5281/zenodo.1979080',
   selection: 'candidate-inferred: t>0 for 28 non-CMC series; all 9 points for 7 CMC-nZVI series',
@@ -47,27 +79,11 @@ console.log(JSON.stringify({
   totalSeries: allSeries.length,
   totalRawMeasurements: dataset.audit.measurementCount,
   candidateFitPoints: candidateCount,
-  model4L: {
-    converged: fit4L.converged, iterations: fit4L.iterations,
-    parameterCount: fit4L.parameterCount, degreesOfFreedom: fit4L.degreesOfFreedom,
-    weightedResidualSumSquares: fit4L.weightedResidualSumSquares,
-    reducedChiSquare: fit4L.reducedChiSquare,
-    ratesByIronType: fit4L.rateConstantsPerHour,
-    alfaBlank: alfaBlank4L,
-    identifiable: fit4L.locallyIdentifiable,
-    conditionNumber: fit4L.informationConditionNumber,
-    warnings: fit4L.warnings,
-  },
-  model4G: {
-    converged: fit4G.converged, iterations: fit4G.iterations,
-    parameterCount: fit4G.parameterCount, degreesOfFreedom: fit4G.degreesOfFreedom,
-    weightedResidualSumSquares: fit4G.weightedResidualSumSquares,
-    reducedChiSquare: fit4G.reducedChiSquare,
-    ratesByIronType: fit4G.rateConstantsPerHour,
-    alfaBlank: alfaBlank4G,
-    identifiable: fit4G.locallyIdentifiable,
-    conditionNumber: fit4G.informationConditionNumber,
-    warnings: fit4G.warnings,
+  paperSeededFits: {
+    model4L_SD_weighted: summarize(fit4LWeighted),
+    model4G_SD_weighted: summarize(fit4GWeighted),
+    model4L_unweighted: summarize(fit4LUnweighted),
+    model4G_unweighted: summarize(fit4GUnweighted),
   },
   publishedTargets: {
     model4L: { reducedChiSquare: 1.6, degreesOfFreedom: 207, alfaBlank: { A: 2.2245, k1PerHour: 0.4113, B: 20.5425, k2PerHour: 0.0076 } },
