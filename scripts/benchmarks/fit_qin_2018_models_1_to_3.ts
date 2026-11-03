@@ -71,6 +71,19 @@ if (Math.abs((fit2.reducedChiSquare ?? NaN) - 7.2) > 1.0)
 if (Math.abs((fit3.reducedChiSquare ?? NaN) - 5.3) > 1.0)
   throw new Error('Model 3 reduced statistic does not match the published value 5.3.');
 
+if (Math.abs(fit1.rateParametersByIronType.Alfa.k1PerHour - 0.0235) > 0.001 ||
+    Math.abs(fit1.localScaleParameters['35'] - 14.1787) > 0.2)
+  throw new Error('Model 1 Alfa blank parameters do not match Table S2.');
+if (Math.abs(fit2.rateParametersByIronType.Alfa.k1PerHour - 0.2072) > 0.005 ||
+    Math.abs(fit2.rateParametersByIronType.Alfa.ratio! - 11.7471) > 0.2 ||
+    Math.abs(fit2.localScaleParameters['35'] - 0.0842) > 0.005)
+  throw new Error('Model 2 Alfa blank parameters do not match Table S3.');
+if (Math.abs(fit3.rateParametersByIronType.Alfa.k1PerHour - 0.4000) > 0.01 ||
+    Math.abs(fit3.rateParametersByIronType.Alfa.k2PerHour! - 0.0074) > 0.0005 ||
+    Math.abs(fit3.rateParametersByIronType.Alfa.ratio! - 9.4411) > 0.5 ||
+    Math.abs(fit3.localScaleParameters['35'] - 0.1401) > 0.01)
+  throw new Error('Model 3 Alfa blank parameters do not match Table S4.');
+
 console.log(JSON.stringify({
   source: '10.5281/zenodo.1979080',
   selection: '31 conditions in Tables S2–S4; four CMC-nZVI dithionite/thiosulfate series excluded',
