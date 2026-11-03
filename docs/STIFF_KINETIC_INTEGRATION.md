@@ -38,3 +38,19 @@ A successful Robertson comparison is evidence for this tested mechanism and tole
 ## Adaptive fitting reference result
 
 The synthetic sequential fit contains 39 species/time observations over 13 times from 0 to 100 s, with k1=800 s^-1 and k2=0.03 s^-1. The independent SciPy 1.17.0 BDF + bounded least-squares reference recovered k1=800.00000049 s^-1 and k2=0.030000000018 s^-1, with weighted RSS 3.89e-14. The TypeScript adaptive implicit fit passes the configured recovery tolerances (0.1 s^-1 for k1 and 1e-5 s^-1 for k2), keeps every fitted prediction within 5e-5 concentration units of the reference observations, and returns non-empty solver diagnostics with zero failed integration trials. The independent Python reference output is archived in the GitHub Actions artifact named stiff-kinetic-fit-scipy-reference.
+
+## Additional reversible-network validation
+
+A second synthetic stiff mechanism now tests a fast reversible relaxation coupled to a slower product drain:
+
+- A → B: (k_f = 800\,s^{-1})
+- B → A: (k_r = 300\,s^{-1})
+- B → C: (k_d = 0.03\,s^{-1})
+
+The fixture samples 18 times from (10^{-5}) to 120 seconds, covering the fast A/B relaxation and slower C accumulation. Independent SciPy 1.17.0 BDF and Radau trajectories agree to a maximum absolute difference of (6.68\times10^{-11}); the BDF reference conserves A+B+C to a maximum absolute error of (8.38\times10^{-13}).
+
+The TypeScript adaptive implicit simulation is checked against both references with relative tolerance (2\times10^{-8}), absolute tolerance (10^{-14}), and a measured acceptance envelope of (2\times10^{-4}) relative or (2\times10^{-8}) absolute per species/time point. Tests also enforce non-negative concentrations and total conservation within (2\times10^{-6}). A separate refinement test confirms that tightening the requested tolerances reduces the maximum trajectory error.
+
+The adaptive implicit fitter is also exercised on all three rate constants using 54 weighted observations and initial guesses (500, 200, 0.02). It must converge without failed integration trials, recover each parameter within the configured tolerance of an independent SciPy BDF + bounded least-squares fit, keep predictions within (2\times10^{-5}) concentration units, and satisfy the weighted-residual gate. The pinned SciPy fit recovered approximately (k_f=800.0000054\,s^{-1}), (k_r=300.0000016\,s^{-1}), and (k_d=0.03000000013\,s^{-1}); its weighted RSS was (9.67\times10^{-8}). CI archives the independent result as `stiff-reversible-slow-drain-scipy-reference`.
+
+This additional fixture is still synthetic. It strengthens numerical evidence for this class of fast reversible/slow irreversible networks, but it does not replace validation against more published stiff chemical mechanisms or establish general-purpose solver certification.
