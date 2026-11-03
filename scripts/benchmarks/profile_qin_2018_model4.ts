@@ -162,7 +162,7 @@ const results = targets.map(t => profile(t.model, t.parameter));
 console.log(JSON.stringify({
   source: 'Qin and Tratnyek 2018; Zenodo 10.5281/zenodo.1979080',
   fitSet: { selection: 'published Model 4 table set: exclude series #64, #65, #68, #69; retain all nine time points in the remaining 31 conditions', series: series.length,
-    observations: 287, selectionConfirmedByAuthors: false },
+    observations: 279, selectionConfirmedByAuthors: false },
   method: 'Conditional profile objective: fix one log-rate over a log-spaced grid and refit every other rate plus all per-series amplitudes.',
   intervalCalibration: 'Approximate Gaussian likelihood-ratio cutoff: n*ln(SSE_profile/SSE_min) <= chi-square(1, 0.95) = 3.84146, profiling an unknown common residual variance.',
   limitations: [
