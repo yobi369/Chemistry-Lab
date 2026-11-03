@@ -42,3 +42,8 @@ CI uses the shared fixture at `scripts/benchmarks/fixtures/sequential-kinetic-fi
 - The TypeScript result must converge, report local identifiability, and agree with the pinned SciPy estimates and weighted residual sum of squares within explicit fixture tolerances.
 
 This is a controlled synthetic cross-implementation regression test, not validation against experimental or published measurements. It currently covers one sequential first-order mechanism and does not establish parity for arbitrary reaction orders, stiff systems, competing pathways, or all optimizer starting conditions. Do not interpret agreement on this fixture as proof that a reaction mechanism is chemically correct.
+
+
+## Stiff fitting validation
+
+The adaptive path is exercised with a synthetic sequential A→B→C mechanism (k1=800 s^-1, k2=0.03 s^-1), whose rate scales differ by more than four orders of magnitude. The TypeScript fit is checked against a SciPy 1.17.0 BDF + bounded least-squares reference for parameter recovery and all observed predictions. CI runs the independent Python benchmark. This validates the integration path for this test mechanism only; it does not establish broad stiff-mechanism support.
