@@ -77,7 +77,7 @@ try {
     'service worker must control the application after the first reload');
 
   const openResearch = async () => {
-    await page.getByRole('button', { name: /Research Lab/ }).first().click();
+    await page.locator('#tab-research').click();
     await page.getByText('RDKit molecular identity & stereochemistry').scrollIntoViewIfNeeded();
   };
   const analyze = async () => {
