@@ -121,5 +121,7 @@ jobs:
         run: npm install --no-save --package-lock=false @rdkit/rdkit@2026.9.1
       - name: Build application with same-origin RDKit assets
         run: bun run build
+      - name: Verify locally staged RDKit JavaScript and WebAssembly assets
+        run: node scripts/benchmarks/verify_rdkit_local_assets.mjs
       - name: Verify RDKit canonical identity, stereochemistry, InChI and valence
         run: node scripts/benchmarks/verify_rdkit_runtime.mjs
