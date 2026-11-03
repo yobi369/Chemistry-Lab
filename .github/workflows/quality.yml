@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -35,6 +35,20 @@ jobs:
             --output /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
           echo "31d726a893ac0e803e6471f5927d875e  /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv" | md5sum --check
           echo "available=true" >> "$GITHUB_OUTPUT"
+      - name: Vendor checksum-verified Qin source into the active research branch
+        if: github.event_name == 'push' && github.ref_name == 'research/qin-fit-uncertainty-diagnostics' && steps.qin_data.outcome == 'success'
+        run: |
+          mkdir -p data/experimental/qin-2018
+          cp /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv
+          if git diff --quiet -- data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv && git ls-files --error-unmatch data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv >/dev/null 2>&1; then
+            echo "Verified raw dataset already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv
+          git commit -m "Vendor checksum-verified Qin 2018 raw dataset"
+          git push origin "HEAD:$GITHUB_REF_NAME"
       - name: Archive exact checksum-verified Qin source CSV
         if: steps.qin_data.outcome == 'success'
         uses: actions/upload-artifact@v4
