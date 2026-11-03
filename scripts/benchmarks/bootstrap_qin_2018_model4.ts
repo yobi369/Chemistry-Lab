@@ -23,12 +23,10 @@ for (const measurement of dataset.measurements) {
     hydrogenMicromoles: measurement.hydrogenMicromoles,
     standardDeviationMicromoles: measurement.standardDeviationMicromoles });
 }
-const sourceSeries = [...grouped.values()].map(series => ({
-  ...series,
-  observations: series.observations.filter(o => o.timeHours > 0 || series.ironType === 'CMC-nZVI'),
-})) as QinExperimentSeries[];
-if (sourceSeries.length !== 35 || sourceSeries.reduce((n, s) => n + s.observations.length, 0) !== 287)
-  throw new Error('Expected the documented candidate fit set of 35 series and 287 observations.');
+const excludedModel4Ids = new Set(['64', '65', '68', '69']);
+const sourceSeries = [...grouped.values()].filter(series => !excludedModel4Ids.has(series.experimentId)) as QinExperimentSeries[];
+if (sourceSeries.length !== 31 || sourceSeries.reduce((n, s) => n + s.observations.length, 0) !== 279)
+  throw new Error('Expected the 31 published Model 4 conditions and all 279 time points.');
 
 const initialRatesByIronType = {
   Alfa: { k1PerHour: 0.4113, k2PerHour: 0.0076 },
@@ -120,7 +118,7 @@ function run(variant: QinModel4Variant) {
 }
 console.log(JSON.stringify({
   source: '10.5281/zenodo.1979080',
-  fitSet: { selection: 'candidate-inferred: t>0 except all CMC-nZVI times', series: sourceSeries.length, observations: 287,
+  fitSet: { selection: 'published Model 4 table set: exclude series #64, #65, #68, #69; retain all nine time points in the remaining 31 conditions', series: sourceSeries.length, observations: 279,
     selectionConfirmedByAuthors: false },
   uncertaintyMethod: 'Stratified nonparametric cluster bootstrap over experimental conditions; within-series time points remain intact.',
   limitations: [

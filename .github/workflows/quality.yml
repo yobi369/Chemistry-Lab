@@ -43,6 +43,16 @@ jobs:
       - name: Fit Qin Models 4L and 4G against candidate paper observation set
         if: steps.qin_data.outcome == 'success'
         run: bun run scripts/benchmarks/fit_qin_2018_dataset.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv > /tmp/qin-model4-typescript.json
+      - name: Audit alternative Qin Model 4 observation-selection conventions
+        if: steps.qin_data.outcome == 'success'
+        run: bun run scripts/benchmarks/audit_qin_2018_model4_observation_selection.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv > /tmp/qin-model4-selection-audit.json
+      - name: Archive Qin Model 4 observation-selection audit
+        if: steps.qin_data.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: qin-model4-observation-selection-audit
+          path: /tmp/qin-model4-selection-audit.json
+          retention-days: 30
       - name: Fit Qin Models 1 to 3 against original experimental series
         if: steps.qin_data.outcome == 'success'
         run: bun run scripts/benchmarks/fit_qin_2018_models_1_to_3.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv > /tmp/qin-models123-typescript.json

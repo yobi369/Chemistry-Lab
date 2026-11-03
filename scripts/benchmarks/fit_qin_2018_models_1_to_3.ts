@@ -15,8 +15,9 @@ for (const m of dataset.measurements) {
   }
   s.observations.push({ timeHours: m.timeHours, hydrogenMicromoles: m.hydrogenMicromoles, standardDeviationMicromoles: m.standardDeviationMicromoles });
 }
-// Tables S2–S4 contain the 31-condition model set; the four CMC-nZVI
-// dithionite/thiosulfate conditions are included in the later Model 4 tables.
+// Tables S2–S6 list the 31-condition fitted set. The four additional CMC-nZVI
+// dithionite/thiosulfate series remain in the raw CSV but are absent from the
+// published coefficient tables for Models 1–4.
 const excludedIds = new Set(['64', '65', '68', '69']);
 const modelSeries = [...grouped.values()].filter(s => !excludedIds.has(s.experimentId)) as QinExperimentSeries[];
 const pointCount = modelSeries.reduce((n, s) => n + s.observations.length, 0);

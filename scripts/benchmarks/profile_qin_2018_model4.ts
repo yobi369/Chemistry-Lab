@@ -21,11 +21,10 @@ for (const measurement of imported.measurements) {
     hydrogenMicromoles: measurement.hydrogenMicromoles,
     standardDeviationMicromoles: measurement.standardDeviationMicromoles });
 }
-const series = [...grouped.values()].map(s => ({
-  ...s, observations: s.observations.filter(o => o.timeHours > 0 || s.ironType === 'CMC-nZVI'),
-})) as QinExperimentSeries[];
-if (series.length !== 35 || series.reduce((n, s) => n + s.observations.length, 0) !== 287)
-  throw new Error('Expected the documented candidate fit set of 35 series and 287 observations.');
+const excludedModel4Ids = new Set(['64', '65', '68', '69']);
+const series = [...grouped.values()].filter(s => !excludedModel4Ids.has(s.experimentId)) as QinExperimentSeries[];
+if (series.length !== 31 || series.reduce((n, s) => n + s.observations.length, 0) !== 279)
+  throw new Error('Expected the 31 published Model 4 conditions and all 279 time points.');
 
 const starts = {
   Alfa: { k1PerHour: 0.4113, k2PerHour: 0.0076 },
@@ -162,8 +161,8 @@ function profile(model: QinModel4Variant, parameter: string) {
 const results = targets.map(t => profile(t.model, t.parameter));
 console.log(JSON.stringify({
   source: 'Qin and Tratnyek 2018; Zenodo 10.5281/zenodo.1979080',
-  fitSet: { selection: 'candidate-inferred: t>0 except all CMC-nZVI times', series: series.length,
-    observations: 287, selectionConfirmedByAuthors: false },
+  fitSet: { selection: 'published Model 4 table set: exclude series #64, #65, #68, #69; retain all nine time points in the remaining 31 conditions', series: series.length,
+    observations: 279, selectionConfirmedByAuthors: false },
   method: 'Conditional profile objective: fix one log-rate over a log-spaced grid and refit every other rate plus all per-series amplitudes.',
   intervalCalibration: 'Approximate Gaussian likelihood-ratio cutoff: n*ln(SSE_profile/SSE_min) <= chi-square(1, 0.95) = 3.84146, profiling an unknown common residual variance.',
   limitations: [
