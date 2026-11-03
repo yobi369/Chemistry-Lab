@@ -37,6 +37,29 @@ The quality workflow keeps the 20-replicate smoke test and additionally runs the
 
 An earlier 200-replicate, three-seed experiment used a reconstructed 35-series / 287-point set. The later audit of the original Tables S5/S6 showed that those tables list 31 local Model 4 conditions, not 35. The earlier bootstrap artifact is retained for traceability but is superseded and must not be used as the primary Model 4 uncertainty report. The 200-replicate, three-seed experiment is being rerun on the 31-condition / 279-observation set.
 
+## Corrected 31-condition multi-seed result
+
+After aligning the benchmark with the 31 conditions in Tables S5/S6, CI completed 200 replicates for each of three seeds (600 requested fits per model):
+
+- Model 4L: 600/600 converged.
+- Model 4G: 600/600 converged.
+
+Lower-bound hits across the 600 replicates:
+
+| Model / parameter | Lower-bound hits | Frequency |
+|---|---:|---:|
+| 4L Beijing k2 | 363 / 600 | 60.5% |
+| 4L Hepure k2 | 238 / 600 | 39.7% |
+| 4L Toda k2 | 144 / 600 | 24.0% |
+| 4G Alfa k2 | 127 / 600 | 21.2% |
+| 4G Beijing k2 | 153 / 600 | 25.5% |
+| 4G Hepure k2 | 229 / 600 | 38.2% |
+| 4G CMC-nZVI k2 | 102 / 600 | 17.0% |
+
+The 4L Beijing k2 median is at the lower optimizer bound for all three seeds. The 97.5th-percentile endpoint for 4L CMC-nZVI k2 varies by approximately 49.9% across seeds; the corresponding 4G CMC-nZVI k2 endpoint varies by 17.4%. The 4L Hepure k2 upper endpoint varies by 8.6%, while its median remains around 4.7e-4 to 5.3e-4 h^-1 across seeds.
+
+These results show that some phase-2 rates remain weakly identified even with 600 resamples per model. The bound-hit counts and seed-specific intervals are retained in the archived report. The seed-to-seed endpoint ranges are stability diagnostics, not additional confidence intervals.
+
 ## Interpretation and limitations
 
 This is a **stratified experimental-condition cluster bootstrap**, not a residual bootstrap, parametric measurement-error bootstrap, profile likelihood, or Bayesian posterior. It measures how the fitted rate estimates vary when the available experimental conditions are resampled within each iron type. It preserves within-series time dependence and each selected series' observed time grid, but does not generate new measurement noise.
