@@ -44,13 +44,14 @@ const initialRates4G = {
   Toda: { k1PerHour: 0.4719, k2PerHour: 0.0170 },
   'CMC-nZVI': { k1PerHour: 0.4719, k2PerHour: 0.0114 },
 };
-const fitOptions = (variant: QinModel4Variant) => ({
+const fitOptions = (variant: QinModel4Variant, calculateUncertainty = false) => ({
   weighting: 'unweighted' as const,
   zeroStandardDeviation: 'unweighted' as const,
   initialRatesByIronType: variant === '4L' ? initialRatesByIronType : initialRates4G,
   ...(variant === '4G' ? { initialSharedK1PerHour: 0.4719 } : {}),
   maxIterations: 180,
   tolerance: 1e-7,
+  calculateUncertainty,
 });
 function stratifiedClusterSample(replicate: number): QinExperimentSeries[] {
   const byType = new Map<string, QinExperimentSeries[]>();
@@ -77,7 +78,7 @@ function parameterValues(variant: QinModel4Variant, rates: ReturnType<typeof fit
   return result;
 }
 function run(variant: QinModel4Variant) {
-  const baseline = fitQinModel4(variant, sourceSeries, fitOptions(variant));
+  const baseline = fitQinModel4(variant, sourceSeries, fitOptions(variant, true));
   if (!baseline.converged) throw new Error(variant + ' baseline fit did not converge.');
   const baselineValues = parameterValues(variant, baseline.rateConstantsPerHour);
   const samples: Record<string, number[]> = Object.fromEntries(Object.keys(baselineValues).map(key => [key, []]));
