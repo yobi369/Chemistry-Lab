@@ -50,6 +50,6 @@ These are deployed HTTP/header/asset checks. The Chromium CSP and offline reload
 
 ## Vercel project protection and release status
 
-The `chemistry-lab` Vercel project is linked to `yobi369/Chemistry-Lab`, uses the Vite framework and builds to `dist`. Preview/deployment URLs remain protected by Vercel Authentication (`all_except_custom_domains`); no public preview access was enabled to make testing easier. The Vercel build command installs the pinned RDKit package before running `bun run build`.
+The `chemistry-lab` Vercel project is linked to `yobi369/Chemistry-Lab`, uses the Vite framework and builds to `dist`. All deployment URLs, including custom domains, are protected by Vercel Authentication (`all`); no public preview or production access was enabled to make testing easier. The Vercel build command installs the pinned RDKit package before running `bun run build`.
 
 A successful GitHub browser test validates the production build and CSP contract locally. The Vercel preview must additionally be checked for READY status, the actual CSP/security response headers, and successful retrieval of `/sw.js`, `/vendor/rdkit/RDKit_minimal.js`, and the WASM asset before this stage is marked complete. The protected preview is accessed through the authenticated Vercel deployment integration; protection is not disabled for validation.
