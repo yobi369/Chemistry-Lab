@@ -244,6 +244,8 @@ export function fitQinAlternativeModel(
     : null;
   const warnings: string[] = [];
   if (!converged) warnings.push('Optimizer stopped without satisfying the convergence criterion.');
+  const boundaryParameters = keys.filter((_, i) => theta[i] <= Math.log(1e-8) + 1e-6 || theta[i] >= Math.log(1e5) - 1e-6);
+  if (boundaryParameters.length) warnings.push('Global parameters reached optimizer bounds: ' + boundaryParameters.join(', ') + '; treat these as boundary-limited, not precise point estimates.');
   if (degreesOfFreedom <= 0) warnings.push('Non-positive degrees of freedom; uncertainty statistics are not defined.');
   if (statistics) warnings.push(...statistics.warnings);
   if (excludedZeroStandardDeviationCount) warnings.push(excludedZeroStandardDeviationCount + ' zero-SD observations excluded by explicit policy.');
