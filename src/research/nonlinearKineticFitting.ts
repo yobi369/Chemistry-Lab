@@ -1,4 +1,5 @@
 import { SimulationInputError } from './gillespie';
+import { simulateMassActionMechanismAdaptiveImplicit, type AdaptiveImplicitOptions } from './stiffKineticSolver';
 
 export interface KineticStoichiometricTerm {
   readonly speciesId: string;
@@ -31,12 +32,23 @@ export interface MechanismObservation {
   readonly standardDeviation?: number;
 }
 export interface NonlinearFitOptions {
+  readonly integrationMethod?: 'rk4' | 'adaptive-implicit';
+  readonly adaptiveImplicitOptions?: AdaptiveImplicitOptions;
   readonly maxIntegrationStepSeconds?: number;
   readonly maxIterations?: number;
   readonly convergenceTolerance?: number;
 }
 export interface NonlinearKineticFit {
-  readonly model: 'mass-action-mechanism-rk4-levenberg-marquardt';
+  readonly model: 'mass-action-mechanism-rk4-levenberg-marquardt' | 'mass-action-mechanism-adaptive-implicit-levenberg-marquardt';
+  readonly integrationMethod: 'rk4' | 'adaptive-implicit';
+  /** Aggregate solver work across all optimizer and finite-difference evaluations. */
+  readonly integrationDiagnostics: {
+    readonly simulationCalls: number;
+    readonly acceptedSteps: number;
+    readonly rejectedSteps: number;
+    readonly newtonIterations: number;
+    readonly functionEvaluations: number;
+  };
   readonly parameterEstimates: Readonly<Record<string, number>>;
   readonly standardErrors: Readonly<Record<string, number>> | null;
   readonly correlationMatrix: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
@@ -304,8 +316,32 @@ export function fitMassActionMechanism(
   const parameterOrder = parameters.map(p => p.reactionId);
   const orderedParameters = parameterOrder.map(id => parameters.find(p => p.reactionId === id)!);
   const weights = observations.map(o => hasSd ? 1 / o.standardDeviation! : 1);
+  const integrationMethod = options.integrationMethod ?? 'rk4';
+  if (integrationMethod !== 'rk4' && integrationMethod !== 'adaptive-implicit') {
+    throw new SimulationInputError('Integration method must be rk4 or adaptive-implicit.');
+  }
+  const integrationDiagnostics = {
+    simulationCalls: 0, acceptedSteps: 0, rejectedSteps: 0,
+    newtonIterations: 0, functionEvaluations: 0,
+  };
   const predict = (theta: readonly number[]) => {
     const rates = mechanism.reactions.map(r => theta[parameterOrder.indexOf(r.id)]);
+    integrationDiagnostics.simulationCalls++;
+    if (integrationMethod === 'adaptive-implicit') {
+      const rateRecord = Object.fromEntries(mechanism.reactions.map((reaction, index) => [reaction.id, rates[index]]));
+      const simulation = simulateMassActionMechanismAdaptiveImplicit(
+        mechanism, rateRecord, sortedTimes, options.adaptiveImplicitOptions,
+      );
+      integrationDiagnostics.acceptedSteps += simulation.acceptedSteps;
+      integrationDiagnostics.rejectedSteps += simulation.rejectedSteps;
+      integrationDiagnostics.newtonIterations += simulation.newtonIterations;
+      integrationDiagnostics.functionEvaluations += simulation.functionEvaluations;
+      const states = new Map(simulation.results.map(result => [
+        result.timeSeconds,
+        mechanism.speciesIds.map(id => result.concentrations[id]),
+      ]));
+      return observations.map(o => states.get(o.timeSeconds)![mechanism.speciesIds.indexOf(o.speciesId)]);
+    }
     const states = integrate(mechanism, rates, sortedTimes, maxStep);
     return observations.map(o => states.get(o.timeSeconds)![mechanism.speciesIds.indexOf(o.speciesId)]);
   };
@@ -377,7 +413,11 @@ export function fitMassActionMechanism(
       theta[i] >= p.upperBound-1e-8*Math.max(1,p.upperBound-p.lowerBound))) warnings.push('At least one estimate is at a parameter bound; local symmetric covariance intervals may be misleading.');
   const fittedValues = predict(theta);
   return {
-    model:'mass-action-mechanism-rk4-levenberg-marquardt',
+    model: integrationMethod === 'rk4'
+      ? 'mass-action-mechanism-rk4-levenberg-marquardt'
+      : 'mass-action-mechanism-adaptive-implicit-levenberg-marquardt',
+    integrationMethod,
+    integrationDiagnostics,
     parameterEstimates:Object.fromEntries(parameterOrder.map((id,i)=>[id,theta[i]])),
     standardErrors, correlationMatrix:correlations, covarianceMatrix:covariance,
     identifiableParameterCount:information.rank, parameterCount:n, locallyIdentifiable,
