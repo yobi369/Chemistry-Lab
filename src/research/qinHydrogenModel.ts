@@ -294,7 +294,7 @@ export function fitQinModel4(
   const covarianceScale = degreesOfFreedom > 0
     ? (options.weighting === 'standard-deviation' ? 1 : current.cost / degreesOfFreedom)
     : 1;
-  const statistics = options.calculateUncertainty === false || degreesOfFreedom <= 0
+  const statistics = options.calculateUncertainty === false || degreesOfFreedom <= 0 || fixedRateIndices.size > 0
     ? null
     : calculateLocalFitStatistics(parameterNames, parameterValues, residualAt, covarianceScale);
   const warnings: string[] = [];
@@ -303,7 +303,8 @@ export function fitQinModel4(
   if (boundaryRates.length) warnings.push('Rate estimates reached optimizer bounds: ' + boundaryRates.join(', ') + '; treat these as boundary-limited, not precise point estimates.');
   if (degreesOfFreedom <= 0) warnings.push('Non-positive residual degrees of freedom; uncertainty statistics are not defined.');
   if (statistics) warnings.push(...statistics.warnings);
-  if (options.calculateUncertainty === false) warnings.push('Local covariance diagnostics were skipped by caller; this fit was used for bootstrap parameter estimation only.');
+  if (options.calculateUncertainty === false) warnings.push('Local covariance diagnostics were skipped by caller; this fit was used for parameter estimation only.');
+  if (fixedRateIndices.size > 0) warnings.push('Conditional profile refit: ' + fixedRateIndices.size + ' rate parameter(s) held fixed; full-fit covariance diagnostics are intentionally unavailable.');
   if (excludedZeroStandardDeviationCount) warnings.push(excludedZeroStandardDeviationCount + ' zero-SD observations were excluded from the weighted objective by explicit policy.');
   if (variant === '4G') warnings.push('4G constrains k1 to one shared value across the full dataset; k2 remains grouped by iron type.');
   return {
