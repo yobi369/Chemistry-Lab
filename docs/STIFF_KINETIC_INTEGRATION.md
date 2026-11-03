@@ -2,7 +2,7 @@
 
 ## Scope
 
-`simulateMassActionMechanismAdaptiveImplicit` is an additional fixed-parameter simulator for well-mixed mass-action mechanisms. It complements the existing fixed-step RK4 simulator; it does not replace RK4 or change the nonlinear fitter's integration path.
+`simulateMassActionMechanismAdaptiveImplicit` is an adaptive fixed-parameter simulator for well-mixed mass-action mechanisms. It can also be selected by `fitMassActionMechanism` using `integrator: 'adaptive-implicit'`. Existing fitting and simulation calls continue to use fixed-step RK4 by default, preserving their prior behavior.
 
 ## Numerical method
 
@@ -16,20 +16,20 @@ Backward Euler is A-stable and L-stable, making it suitable as a conservative ba
 
 ## API and diagnostics
 
-The function accepts the same `KineticMechanism` representation as the RK4 simulator, a rate constant for every reaction, requested output times, and optional relative/absolute tolerances and step/Newton limits. The result includes concentrations at the requested times plus accepted/rejected step counts, Newton iterations, function evaluations, and the tolerances used.
+The simulator accepts the same `KineticMechanism` representation as the RK4 simulator, a rate constant for every reaction, requested output times, and optional relative/absolute tolerances and step/Newton limits. The result includes concentrations at the requested times plus accepted/rejected step counts, Newton iterations, function evaluations, and the tolerances used. The nonlinear fitter accepts `integrator: 'adaptive-implicit'` and `adaptiveImplicitOptions`; it uses the adaptive solver for each residual evaluation, finite-difference sensitivity and final prediction. Failed trial integrations are rejected through increased LM damping and counted in `integrationFailures`. The returned `integrationDiagnostics` describe the final fitted trajectory only, not the cumulative work across all optimizer evaluations.
 
 All species use one consistent concentration unit. Rate constants retain the mass-action units implied by reaction order. The implementation rejects invalid mechanisms, rates, times, and solver settings; it also rejects failed Newton steps or step-size exhaustion rather than silently returning a partial trajectory.
 
 ## Validation
 
-The automated stiff-system test expresses the Robertson (1966) problem as three mass-action reactions and compares the adaptive implicit trajectory with the repository's independently generated SciPy 1.17.0 BDF and Radau reference trajectories through 10^5 seconds. It also checks non-negative concentrations and conservation of A+B+C.
+The automated stiff-system tests express the Robertson (1966) problem as three mass-action reactions and compare the adaptive implicit trajectory with independently generated SciPy 1.17.0 BDF and Radau references through 10^5 seconds. A second test fits a stiff sequential A→B→C mechanism with k1=800 s^-1 and k2=0.03 s^-1 using the adaptive implicit path; it checks parameter recovery, predictions and solver diagnostics against a SciPy BDF + bounded least-squares fixture. CI independently regenerates the SciPy fit. The Robertson test also checks non-negative concentrations and conservation of A+B+C.
 
 ## Limitations
 
 - This is an adaptive backward-Euler solver, not BDF, Radau, Rosenbrock, or a production-grade general-purpose ODE package.
 - It uses a finite-difference Jacobian and dense linear algebra; large sparse reaction networks will not scale efficiently.
-- The current nonlinear parameter-fitting function still uses fixed-step RK4. The implicit solver is simulation-only until it is integrated into fitting and its parameter sensitivities/covariance are validated.
-- Robertson is one published stiff benchmark. More stiff mechanisms, tolerance-refinement studies, and expert numerical review remain necessary before making broad stiff-chemistry claims.
+- The nonlinear fitter can opt into the adaptive implicit solver, but RK4 remains the default. The adaptive path uses finite-difference parameter sensitivities through repeated integrations; optimizer convergence and local covariance remain approximate and require broader stiff-mechanism validation.
+- Robertson is one published stiff benchmark and the sequential fit fixture is synthetic. More published stiff mechanisms, tolerance-refinement studies, multi-start fitting studies, and expert numerical review remain necessary before making broad stiff-chemistry claims.
 - It does not add temperature coupling, energy balances, pressure dependence, non-ideal activities, or spatial transport.
 
 A successful Robertson comparison is evidence for this tested mechanism and tolerance range only; it is not certification for arbitrary stiff chemical systems.
