@@ -117,9 +117,9 @@ jobs:
       - name: Independently verify Qin Models 1 to 3 with SciPy
         if: steps.qin_data.outcome == 'success'
         run: python scripts/benchmarks/verify_qin_models_1_to_3_scipy.py /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv /tmp/qin-models123-typescript.json
-      - name: Build application
-        run: bun run build
-      - name: Install pinned RDKit.js runtime for molecular smoke tests
+      - name: Install pinned RDKit.js runtime for molecular smoke tests and local browser assets
         run: npm install --no-save --package-lock=false @rdkit/rdkit@2026.9.1
+      - name: Build application with same-origin RDKit assets
+        run: bun run build
       - name: Verify RDKit canonical identity, stereochemistry, InChI and valence
         run: node scripts/benchmarks/verify_rdkit_runtime.mjs
