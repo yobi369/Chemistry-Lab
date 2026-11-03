@@ -96,9 +96,16 @@ jobs:
         run: python scripts/benchmarks/verify_scipy_references.py
       - name: Verify independent nonlinear kinetic fitting benchmark
         run: python scripts/benchmarks/verify_scipy_kinetic_fit.py
-      - name: Independently verify Qin Model 4 global fits with SciPy
+      - name: Independently verify Qin Model 4 global fits and complete predictions with SciPy
         if: steps.qin_data.outcome == 'success'
-        run: python scripts/benchmarks/verify_qin_global_fits_scipy.py /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv /tmp/qin-model4-typescript.json
+        run: python scripts/benchmarks/verify_qin_global_fits_scipy.py /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv /tmp/qin-model4-typescript.json > /tmp/qin-model4-prediction-validation.json
+      - name: Archive complete Qin Model 4 prediction/residual comparison
+        if: steps.qin_data.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: qin-model4-prediction-validation
+          path: /tmp/qin-model4-prediction-validation.json
+          retention-days: 30
       - name: Independently verify Qin Models 1 to 3 with SciPy
         if: steps.qin_data.outcome == 'success'
         run: python scripts/benchmarks/verify_qin_models_1_to_3_scipy.py /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv /tmp/qin-models123-typescript.json
