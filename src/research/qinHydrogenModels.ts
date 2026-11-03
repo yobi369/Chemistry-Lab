@@ -1,3 +1,4 @@
+import { calculateLocalFitStatistics } from './localFitStatistics';
 import {
   QinExperimentSeries, QinIronType, QinModel4Options, QinModel4FitError,
 } from './qinHydrogenModel';
@@ -23,8 +24,15 @@ export interface QinAlternativeFit {
   readonly sumSquaredResiduals: number;
   readonly weightedResidualSumSquares: number | null;
   readonly reducedChiSquare: number | null;
+  readonly reducedChiSquareConvention: 'weighted-residual-sum-of-squares/df' | 'unweighted-residual-sum-of-squares/df';
   readonly iterations: number;
   readonly converged: boolean;
+  readonly standardErrors: Readonly<Record<string, number | null>> | null;
+  readonly covarianceMatrix: readonly (readonly number[])[] | null;
+  readonly correlationMatrix: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
+  readonly identifiableParameterCount: number;
+  readonly locallyIdentifiable: boolean;
+  readonly informationConditionNumber: number;
   readonly warnings: readonly string[];
 }
 interface PreparedSeries extends QinExperimentSeries {
@@ -104,9 +112,10 @@ export function fitQinAlternativeModel(
     const defaults = options.initialRatesByIronType?.[type] ?? { k1PerHour: 0.4, k2PerHour: 0.008 };
     if (name === 'k1') return Math.log(defaults.k1PerHour);
     if (name === 'k2') return Math.log(defaults.k2PerHour);
-    return Math.log(10);
+    return Math.log(options.initialRatiosByIronType?.[type] ?? 10);
   });
-  if (initial.some(v => !finite(v))) throw new QinModel4FitError('Initial rates must be finite.');
+  if (initial.some((v, i) => !finite(v) || v < Math.log(1e-8) || v > Math.log(keys[i].endsWith(':ratio') ? 1e5 : 10)))
+    throw new QinModel4FitError('Initial rates/ratios must be within their documented positive bounds.');
   const decode = (theta: readonly number[], type: QinIronType) => {
     const k1 = Math.exp(theta[keys.indexOf(type + ':k1')]);
     const k2 = model === '3' ? Math.exp(theta[keys.indexOf(type + ':k2')]) : 0;
@@ -151,7 +160,9 @@ export function fitQinAlternativeModel(
   for (; iterations < maxIterations; iterations++) {
     const columns = theta.map((value, j) => {
       const h = 1e-4, plus = [...theta], minus = [...theta];
-      plus[j] += h; minus[j] -= h; project(plus); project(minus);
+      const upper = Math.log(keys[j].endsWith(':ratio') ? 1e5 : 10);
+      plus[j] = Math.min(upper, value + h); minus[j] = Math.max(Math.log(1e-8), value - h);
+      project(plus); project(minus);
       const rp = evaluate(plus).residuals, rm = evaluate(minus).residuals;
       return rp.map((v, i) => (v - rm[i]) / (plus[j] - minus[j]));
     });
@@ -164,7 +175,7 @@ export function fitQinAlternativeModel(
     const damped = normal.map((row, i) => row.map((v, k) => v + (i === k ? lambda * Math.max(normal[i][i], 1e-10) : 0)));
     const delta = solve(damped, gradient.map(v => -v));
     if (!delta) break;
-    const candidate = project(theta.map((v, i) => Math.max(Math.log(1e-8), Math.min(Math.log(1e5), v + delta[i]))));
+    const candidate = project(theta.map((v, i) => Math.max(Math.log(1e-8), Math.min(Math.log(keys[i].endsWith(':ratio') ? 1e5 : 10), v + delta[i]))));
     const next = evaluate(candidate);
     if (next.cost < current.cost) {
       const improvement = current.cost - next.cost;
@@ -202,9 +213,44 @@ export function fitQinAlternativeModel(
   const parameterCount = keys.length + series.length, degreesOfFreedom = includedObservationCount - parameterCount;
   const weightedResidualSumSquares = options.weighting === 'standard-deviation' ? current.cost : null;
   const sumSquaredResiduals = fitted.reduce((sum, o) => sum + o.residualMicromoles ** 2, 0);
+  const parameterNames = [
+    ...keys.map(key => key.replace(':', '.').replace('k1', 'k1PerHour').replace('k2', 'k2PerHour')),
+    ...series.map(s => s.experimentId + '.localScale'),
+  ];
+  const parameterValues = [
+    ...theta.map(Math.exp),
+    ...series.map(s => current.scales[s.experimentId]),
+  ];
+  const residualAt = (values: readonly number[]) => {
+    const result: number[] = [];
+    prepared.forEach((s, seriesIndex) => {
+      const get = (name: string) => values[keys.indexOf(s.ironType + ':' + name)];
+      const p = {
+        k1: get('k1'),
+        k2: model === '3' ? get('k2') : 0,
+        ratio: model === '1' ? 1 : get('ratio'),
+      };
+      const scale = values[keys.length + seriesIndex];
+      s.observations.forEach((o, i) => {
+        const w = s.weights[i];
+        if (w === null) return;
+        result.push((o.hydrogenMicromoles - scale * basis(model, o.timeHours, p)) * Math.sqrt(w));
+      });
+    });
+    return result;
+  };
+  const covarianceScale = degreesOfFreedom > 0
+    ? (options.weighting === 'standard-deviation' ? 1 : current.cost / degreesOfFreedom)
+    : 1;
+  const statistics = degreesOfFreedom > 0
+    ? calculateLocalFitStatistics(parameterNames, parameterValues, residualAt, covarianceScale)
+    : null;
   const warnings: string[] = [];
   if (!converged) warnings.push('Optimizer stopped without satisfying the convergence criterion.');
+  const boundaryParameters = keys.filter((key, i) => theta[i] <= Math.log(1e-8) + 1e-6 || theta[i] >= Math.log(key.endsWith(':ratio') ? 1e5 : 10) - 1e-6);
+  if (boundaryParameters.length) warnings.push('Global parameters reached optimizer bounds: ' + boundaryParameters.join(', ') + '; treat these as boundary-limited, not precise point estimates.');
   if (degreesOfFreedom <= 0) warnings.push('Non-positive degrees of freedom; uncertainty statistics are not defined.');
+  if (statistics) warnings.push(...statistics.warnings);
   if (excludedZeroStandardDeviationCount) warnings.push(excludedZeroStandardDeviationCount + ' zero-SD observations excluded by explicit policy.');
   return {
     model, equation: model === '1'
@@ -217,8 +263,17 @@ export function fitQinAlternativeModel(
     fitted, weighting: options.weighting, zeroStandardDeviationPolicy: options.zeroStandardDeviation,
     includedObservationCount, excludedZeroStandardDeviationCount, parameterCount, degreesOfFreedom,
     sumSquaredResiduals, weightedResidualSumSquares,
-    reducedChiSquare: weightedResidualSumSquares !== null && degreesOfFreedom > 0
-      ? weightedResidualSumSquares / degreesOfFreedom : null,
-    iterations, converged, warnings,
+    reducedChiSquare: degreesOfFreedom > 0
+      ? (weightedResidualSumSquares ?? sumSquaredResiduals) / degreesOfFreedom : null,
+    reducedChiSquareConvention: options.weighting === 'standard-deviation'
+      ? 'weighted-residual-sum-of-squares/df' : 'unweighted-residual-sum-of-squares/df',
+    iterations, converged,
+    standardErrors: statistics?.standardErrors ?? null,
+    covarianceMatrix: statistics?.covarianceMatrix ?? null,
+    correlationMatrix: statistics?.correlationMatrix ?? null,
+    identifiableParameterCount: statistics?.identifiableParameterCount ?? 0,
+    locallyIdentifiable: statistics?.locallyIdentifiable ?? false,
+    informationConditionNumber: statistics?.informationConditionNumber ?? Number.POSITIVE_INFINITY,
+    warnings,
   };
 }

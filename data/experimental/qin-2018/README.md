@@ -27,7 +27,7 @@ Tratnyek, P. G., Qin, H., & Guan, X. (2018). Raw data from Qin et al. (2018). Ze
 
 ## Re-fetch and verify the source file
 
-The raw CSV is currently fetched from the versioned Zenodo record in CI rather than silently copied from a secondary source. The manifest pins the filename, DOI, units, CC BY 4.0 licence and Zenodo-published MD5 checksum.
+The original raw CSV is now vendored byte-for-byte in this directory. CI verifies its Zenodo-published MD5 checksum before parsing or fitting. The manifest pins the filename, DOI, units, CC BY 4.0 licence and checksum. The file was copied from the verified Zenodo download artifact; its MD5 remains 31d726a893ac0e803e6471f5927d875e.
 
 ```bash
 mkdir -p data/experimental/qin-2018
@@ -38,4 +38,4 @@ md5sum data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv
 bun run scripts/benchmarks/verify_qin_2018_dataset.ts data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv
 ```
 
-The CI job downloads the same file, checks the published checksum, parses the full dataset through the production importer and asserts the series count and 120-hour horizon. The raw file is not yet committed to Git; the pinned source record is the current data source of truth.
+The CI job checks the committed file against the published checksum, parses the full dataset through the production importer, fits the four kinetic models and cross-checks the global fits with SciPy. The committed raw file is the reproducible source of truth; Zenodo remains the provenance source.

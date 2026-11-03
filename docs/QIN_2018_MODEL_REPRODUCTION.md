@@ -52,27 +52,22 @@ The implementation exposes two objective modes:
 - unweighted: ordinary sum of squared H₂ residuals.
 - standard-deviation: inverse-variance weighted sum, using 1/SD².
 
-Zero-SD observations are not assigned infinite weight. The caller must explicitly select exclude, unweighted, or error; exclusions are counted in the fit result. This policy is an implementation safeguard, not an assertion that it matches the original authors' exact handling. The exact weighting convention and zero-SD treatment must be confirmed from the paper's fitting methods/SI before reduced χ² can be compared as a reproduction.
+Zero-SD observations are not assigned infinite weight. The caller must explicitly select exclude, unweighted, or error; exclusions are counted in the fit result. This policy is an implementation safeguard, not an assertion that it matches the original authors' exact handling. A real-data comparison established that the paper-compatible parameter estimates and reported reduced χ² values are reproduced by the unweighted objective. The SD-weighted objective produces materially different coefficients and a reduced weighted residual statistic near 172, so it is retained only as a sensitivity analysis, not as the reproduction mode.
 
 ## Current validation boundary
 
-Synthetic tests verify recovery of known 4L and 4G parameters and the distinct parameter-sharing constraints. The current fitter does not yet calculate the full joint covariance matrix or parameter standard errors. It has not yet been run against the full Zenodo CSV in CI because Zenodo returned HTTP 503 during the attempted download. Therefore no fitted values or χ² values are claimed as reproductions of the paper.
+The CI pipeline now downloads the exact Zenodo CSV, verifies its published MD5, and parses all 35 series / 315 measurements. The paper-compatible fit selection is reconstructed as all non-zero-time observations plus the seven CMC-nZVI time-zero observations (287 points total). This gives 207 degrees of freedom for 4L and 211 for 4G, exactly as reported. The selection is inferred from the published degrees of freedom and cross-checked against Tables S5/S6; the source paper does not appear to state this filtering rule explicitly.
+
+On the Model 4 set, the unweighted fit gives 4L SSE/df = 1.623 (paper: 1.6; df 207) and 4G SSE/df = 3.876 (paper: 3.8; df 211). Alfa control-series coefficients reproduce Tables S5/S6 to reported precision; Toda and CMC rate groups also closely reproduce their tabulated values. Beijing/Hepure phase-2 rates remain weakly identified, consistent with the authors' reported large uncertainties.
+
+Models 1–3 were also fitted to the 31-condition / 279-point set represented in Tables S2–S4. Their unweighted SSE/df values are 44.787 (paper: 45; df 243), 7.156 (paper: 7.2; df 238), and 5.329 (paper: 5.3; df 233), respectively. Alfa control-series coefficients reproduce Tables S2–S4. The four additional CMC-nZVI dithionite/thiosulfate conditions appear in the Model 4 table set but not in Tables S2–S4; this model-specific coverage is encoded explicitly in the real-data CI benchmark.
+
+An independent SciPy 1.17 implementation using bounded nonlinear least squares and non-negative local linear amplitudes reproduces the TypeScript Model 4L/4G residual sums, degrees of freedom, well-identified rates and Alfa blank amplitudes to numerical tolerance. The same independent SciPy cross-check now passes for Models 1–3. The SD-weighted sensitivity fit produces materially different coefficients and a reduced weighted residual statistic near 172, so it is retained only as a sensitivity analysis, not as the reference reproduction. The local covariance code returns diagnostics; some fit matrices are ill-conditioned or rank-deficient, so standard errors are withheld rather than fabricated.
 
 ## Next validation gates
 
-1. Make the checksum-pinned raw CSV reliably available and run all 35 series through the importer and fitter.
-2. Confirm exact weighting, inclusion/exclusion and residual degrees-of-freedom conventions from the supporting information.
-3. Compare 4L/4G rates, local amplitudes, reduced χ² and degrees of freedom against the published Tables S5/S6 and Table 1.
-4. Add full joint covariance, standard errors, parameter correlations, profile-likelihood or bootstrap checks for weakly identified rates.
-5. Implement Models 1–3 and reproduce the four-model comparison, not only the preferred Model 4.
-6. Add independent SciPy least_squares fitting and compare predictions, objective and parameter estimates against the TypeScript implementation.
-
-## Models 1–3 now implemented
-
-The same fitting API exposes the earlier alternatives described in the article:
-
-- **Model 1 — uniform passivation:** one exponential appearance term, A(1 − exp(−kt)); k is global by iron type and A is local.
-- **Model 2 — replacement:** a zero-order linear term plus an exponential term, C[t + (r − 1)(1 − exp(−kt))/k], where C = S₁,₀·kH₂,₂ and r = kH₂,₁/kH₂,₂; k and r are global by iron type, C is local.
-- **Model 3 — advanced phase replacement:** the integrated two-step sequence S₁ → S₂ → inactive products, with k₁, k₂ and r global by iron type and C local. The implementation uses the analytic equal-rate limit to avoid cancellation when k₁ ≈ k₂.
-
-All three implementations are currently covered by synthetic parameter-recovery tests. They are not yet fitted to the Zenodo observations; no paper-comparison statistics are claimed.
+1. Keep the vendored CSV byte-for-byte unchanged and retain its checksum/provenance verification in CI.
+2. Independently confirm the inferred model-specific observation sets against author fitting files if they can be obtained; the current selections are supported by the exact published degrees of freedom and coefficient/statistic reproduction.
+3. Improve multi-start and identifiability handling for weakly constrained Beijing/Hepure phase-2 parameters, preserving non-unique minima and wide uncertainty.
+4. Validate local covariance against the paper's tabulated standard errors and add profile-likelihood/bootstrap intervals for weakly identified parameters.
+5. Extend the passing independent SciPy comparison to prediction-level residual plots and uncertainty intervals for weakly identified groups.

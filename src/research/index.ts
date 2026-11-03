@@ -24,3 +24,4 @@ export * from './stiffKineticSolver';
 export * from './experimentalCsv';
 export * from './qinHydrogenModel';
 export * from './qinHydrogenModels';
+export * from './localFitStatistics';
