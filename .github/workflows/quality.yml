@@ -35,6 +35,13 @@ jobs:
             --output /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
           echo "31d726a893ac0e803e6471f5927d875e  /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv" | md5sum --check
           echo "available=true" >> "$GITHUB_OUTPUT"
+      - name: Archive exact checksum-verified Qin source CSV
+        if: steps.qin_data.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: qin-2018-source-csv
+          path: /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
+          retention-days: 30
       - name: Parse and audit the real Qin experimental time series
         if: steps.qin_data.outcome == 'success'
         run: bun run scripts/benchmarks/verify_qin_2018_dataset.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
