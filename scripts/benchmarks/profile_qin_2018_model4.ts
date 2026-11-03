@@ -54,6 +54,15 @@ const targets = [
 function startsFromFit(fit: ReturnType<typeof fitQinModel4>) {
   return Object.fromEntries(Object.entries(fit.rateConstantsPerHour).map(([type, r]) => [type, r])) as typeof starts;
 }
+function phaseSwapVariants(baseRates: typeof starts): typeof starts[] {
+  const keys = Object.keys(baseRates) as (keyof typeof starts)[];
+  return keys.map(swappedType => Object.fromEntries(keys.map(type => [
+    type,
+    type === swappedType
+      ? { k1PerHour: baseRates[type].k2PerHour, k2PerHour: baseRates[type].k1PerHour }
+      : { ...baseRates[type] },
+  ])) as typeof starts);
+}
 function profile(model: QinModel4Variant, parameter: string) {
   const initialRates = model === '4L' ? starts : starts4G;
   const baselineKeys = Object.keys(initialRates) as (keyof typeof initialRates)[];
@@ -77,7 +86,7 @@ function profile(model: QinModel4Variant, parameter: string) {
       }];
     })) as typeof initialRates;
   });
-  const baselineCandidates = [initialRates, ...baselineSeeds].map(seed =>
+  const baselineCandidates = [initialRates, ...baselineSeeds, ...phaseSwapVariants(initialRates)].map(seed =>
     fitQinModel4(model, series, options(model, seed)));
   const baseline = baselineCandidates.reduce<ReturnType<typeof fitQinModel4> | null>(
     (best, candidate) => candidate.converged &&
@@ -134,6 +143,8 @@ function profile(model: QinModel4Variant, parameter: string) {
     const seedVariants = [
       ...makeSeedVariants(rates),
       ...makeSeedVariants(continuationRates),
+      ...phaseSwapVariants(rates),
+      ...phaseSwapVariants(continuationRates),
     ];
     for (const seed of seedVariants) {
       const fit = fitQinModel4(model, series, {
