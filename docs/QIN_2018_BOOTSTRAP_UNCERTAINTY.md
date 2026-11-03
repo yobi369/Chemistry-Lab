@@ -33,6 +33,29 @@ The multi-seed report records each seed's Model 4L and 4G percentile intervals, 
 
 The quality workflow keeps the 20-replicate smoke test and additionally runs the 200-replicate, three-seed experiment, archiving the complete JSON report. This produces 600 resamples per model across independent seeded streams. Review each seed separately: a stable median with unstable upper endpoints, repeated lower-bound hits, or substantial convergence failures still indicates weak identification.
 
+## Latest archived three-seed result
+
+The CI experiment completed with 200 requested replicates for each of three seeds (600 requested fits per model):
+
+- Model 4L: 600/600 converged.
+- Model 4G: 597/600 converged; 3 failures were retained in the report.
+
+Lower-bound hits across the 600 requested replicates:
+
+| Model / parameter | Lower-bound hits | Frequency |
+|---|---:|---:|
+| 4L Beijing k2 | 345 / 600 | 57.5% |
+| 4L Hepure k2 | 260 / 600 | 43.3% |
+| 4L Toda k2 | 151 / 600 | 25.2% |
+| 4G Alfa k2 | 142 / 600 | 23.7% |
+| 4G Beijing k2 | 164 / 600 | 27.3% |
+| 4G Hepure k2 | 262 / 600 | 43.7% |
+| 4G CMC-nZVI k2 | 102 / 600 | 17.0% |
+
+The seed-to-seed relative spread of the 97.5th percentile endpoint was 28.6% for 4L Hepure k2 and 23.6% for 4G Hepure k2. For 4L Beijing k2, the median was at the lower optimizer bound in all three seeds. These are direct signs of weak or boundary-limited identification, not evidence that the bootstrap has failed. The three Model 4G non-convergences are visible in the archived report and were not silently counted as successful samples.
+
+The full report is archived by the GitHub Actions artifact named qin-model4-multiseed-bootstrap. Seed-specific intervals remain separate; the across-seed ranges are diagnostics and must not be treated as additional confidence intervals.
+
 ## Interpretation and limitations
 
 This is a **stratified experimental-condition cluster bootstrap**, not a residual bootstrap, parametric measurement-error bootstrap, profile likelihood, or Bayesian posterior. It measures how the fitted rate estimates vary when the available experimental conditions are resampled within each iron type. It preserves within-series time dependence and each selected series' observed time grid, but does not generate new measurement noise.
