@@ -11,7 +11,19 @@ The Robertson (1966) stiff chemical kinetics problem is included as a published 
 - `y3' = 3×10^7 y2²`
 - `y(0) = (1, 0, 0)`
 
-BDF and Radau reference trajectories are frozen at logarithmically spaced observation times through 10^5 s. CI checks both solver trajectories, positivity and the conserved total y1+y2+y3=1. The Chemistry Lab fixed-step RK4 solver is deliberately not run on this extremely stiff case: it is not a stiff integrator, and this benchmark records the capability boundary rather than disguising it.
+BDF and Radau reference trajectories are frozen at logarithmically spaced observation times through 10^5 s. CI checks both solver trajectories, positivity and the conserved total y1+y2+y3=1. The Chemistry Lab fixed-step RK4 solver is deliberately not run on this extremely stiff case: it is not a stiff integrator, and this benchmark records the capability boundary rather than disguising it. The opt-in adaptive implicit solver is validated separately on two synthetic stiff first-order mechanisms.
+
+## Stiff fitting and reversible-network references
+
+The adaptive implicit fitting path is checked on two synthetic mechanisms against SciPy 1.17.0:
+- Sequential A→B→C with fast and slow rate scales, fitted with bounded least squares against a BDF trajectory.
+- Fast reversible A⇌B relaxation coupled to a slow B→C drain. The trajectory is compared with both BDF and Radau, and all three rate constants are recovered by a separate SciPy BDF + bounded least-squares reference.
+
+The second fixture spans 18 times from the fast transient through the slow drain and checks positivity, total A+B+C conservation, prediction agreement and tolerance refinement. Both are synthetic numerical fixtures, not published chemical mechanisms.
+
+## Independent spatial PDE reference
+
+The 2-D finite-volume diffusion solver is checked against independent SciPy 1.17.0 BDF and Radau method-of-lines references on 8×8, 16×16, 32×32 and 64×64 no-flux grids. A cell-centred cosine eigenmode supplies a closed-form semi-discrete reference; CI compares the TypeScript explicit finite-volume solver directly with that solution, checks BDF/Radau agreement and mass conservation, and gates successive mesh-refinement error ratios. See `docs/SPATIAL_REACTION_DIFFUSION_2D.md`.
 
 ## Published kinetics reference data
 
@@ -25,7 +37,7 @@ The GitHub Actions quality workflow installs the pinned SciPy version and runs:
 
 `python scripts/benchmarks/verify_scipy_references.py`
 
-The TypeScript research tests compare the Chemistry Lab RK4 sequential-mechanism trajectory with the independent SciPy BDF fixture and validate the NIST Arrhenius table.
+The TypeScript research tests compare the Chemistry Lab sequential-mechanism trajectory with the independent SciPy BDF fixture, validate the NIST Arrhenius table, and compare the 2-D finite-volume solver across four meshes. CI also regenerates the stiff-network BDF/Radau references and the 2-D spatial mesh report.
 
 ## Sources
 
@@ -36,4 +48,4 @@ The TypeScript research tests compare the Chemistry Lab RK4 sequential-mechanism
 
 ## Remaining benchmark gaps
 
-This is a first reproducible external benchmark layer, not comprehensive validation. There is not yet a raw experimental concentration-time dataset with measurement covariance and full mechanism metadata fitted end-to-end. The fixed-step RK4 solver is not validated for stiff systems. Spatial reaction-diffusion still needs manufactured-solution order studies and comparison with an external PDE package. Future benchmark additions should preserve source record identifiers, licensing/attribution, original units, uncertainty metadata, provenance and immutable reference hashes.
+This is a first reproducible external benchmark layer, not comprehensive validation. There is not yet a raw experimental concentration-time dataset with measurement covariance and full mechanism metadata fitted end-to-end. The fixed-step RK4 solver is not validated for stiff systems. The 2-D diffusion operator now has manufactured-solution order studies and an independent SciPy multi-mesh reference. Broader validation is still needed for advection-dominated flows, heterogeneous coefficients, irregular geometries, nonlinear reaction-diffusion and measured spatial datasets. Future benchmark additions should preserve source record identifiers, licensing/attribution, original units, uncertainty metadata, provenance and immutable reference hashes.
