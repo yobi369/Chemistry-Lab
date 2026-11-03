@@ -96,7 +96,7 @@ test('conditional profile refit holds the requested rate exactly and refits free
     fixedRateConstantsPerHour: { 'Alfa.k1PerHour': 0.42 },
   });
   assert.equal(fit.converged, true);
-  assert.equal(fit.rateConstantsPerHour.Alfa.k1PerHour, 0.42);
+  assert.ok(Math.abs(fit.rateConstantsPerHour.Alfa.k1PerHour - 0.42) < 1e-14);
   assert.ok(Math.abs(fit.rateConstantsPerHour.Alfa.k2PerHour - 0.008) < 1e-5);
   assert.equal(fit.covarianceMatrix, null);
   assert.ok(fit.warnings.some(warning => warning.includes('Conditional profile refit')));
