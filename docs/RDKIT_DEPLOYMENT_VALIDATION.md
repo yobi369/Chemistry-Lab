@@ -10,13 +10,14 @@ The browser adapter sends SMILES to a same-origin dedicated worker. That worker 
 
 `vercel.json` applies a CSP and baseline response headers. The CSP:
 - Restricts default resources to same origin.
-- Allows WebAssembly compilation with `'wasm-unsafe-eval'` without enabling general JavaScript `'unsafe-eval'`.
+- The main application policy permits WebAssembly compilation with `'wasm-unsafe-eval'` but does not grant general JavaScript `'unsafe-eval'` to the page.
+- The dedicated `/rdkit-worker.js` response has a separate, narrower worker-only CSP that grants the Embind-required `'unsafe-eval'` and `'wasm-unsafe-eval'` only to that isolated worker; it does not relax the main document policy.
 - Allows the pinned jsDelivr fallback in `script-src` and `connect-src`.
 - Allows the Google Fonts stylesheet/font origins already used by the app.
 - Allows the Vercel preview feedback script and its same-origin WebSocket/API connections.
 - Restricts object embedding, form submission, frame ancestors, and worker origins.
 
-The dedicated `/rdkit-worker.js` script is served with its own CSP and `Cache-Control: no-cache`. The service worker is served with `Cache-Control: no-cache` and `Service-Worker-Allowed: /`. Local RDKit files receive long-lived immutable caching because the RDKit version is pinned and changed assets are deployed with a new build.
+The dedicated `/rdkit-worker.js` script is served with its own worker-scoped CSP and `Cache-Control: no-cache`. The application page remains under the stricter main CSP. The service worker is served with `Cache-Control: no-cache` and `Service-Worker-Allowed: /`. Local RDKit files receive long-lived immutable caching because the RDKit version is pinned and changed assets are deployed with a new build.
 
 ## Offline behavior
 
@@ -40,7 +41,7 @@ A separate local asset integrity check validates the RDKit manifest, file presen
 The latest Vercel preview for this branch reached `READY` at deployment `dpl_HQzigXtu8ciSGxVHuNoEUEFSyizF` (commit `ec30857295097c9888b9169dd19bb5c7dd9cddbd`). Authenticated deployment fetches returned HTTP 200 for the application root, `/sw.js`, `/vendor/rdkit/2026.9.1/manifest.json`, `/vendor/rdkit/2026.9.1/RDKit_minimal.js`, and `/vendor/rdkit/2026.9.1/RDKit_minimal.wasm`.
 
 Observed response properties:
-- The root document returns the configured Content-Security-Policy, including `'wasm-unsafe-eval'`, same-origin scripts, the pinned CDN fallback, Google Fonts, and Vercel preview feedback origins.
+- The root document returns the configured Content-Security-Policy, including `'wasm-unsafe-eval'` but not general `'unsafe-eval'`, same-origin scripts, the pinned CDN fallback, Google Fonts, and Vercel preview feedback origins. The dedicated RDKit worker has a separate worker-only policy for Embind.
 - Baseline security headers are present: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, strict-origin referrer policy, and a restrictive Permissions Policy. Vercel supplies HSTS.
 - `/sw.js` returns `Cache-Control: no-cache` and `Service-Worker-Allowed: /`.
 - The manifest reports RDKit.js 2026.9.1 and lists the MinimalLib JS and WASM assets.
