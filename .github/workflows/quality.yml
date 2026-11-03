@@ -24,6 +24,15 @@ jobs:
         run: bun run typecheck
       - name: Run tests
         run: bun run test
+      - name: Download and verify published Qin–Tratnyek 2018 experimental data
+        run: |
+          mkdir -p /tmp/qin-2018
+          curl --fail --location --retry 3 --retry-all-errors \
+            "https://zenodo.org/records/1979080/files/QinTratnyek18-H2vsTime-Data.csv?download=1" \
+            --output /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
+          echo "31d726a893ac0e803e6471f5927d875e  /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv" | md5sum --check
+      - name: Parse and audit the real Qin experimental time series
+        run: bun run scripts/benchmarks/verify_qin_2018_dataset.ts /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv
       - name: Verify independent SciPy reference benchmarks
         uses: actions/setup-python@v6
         with:
