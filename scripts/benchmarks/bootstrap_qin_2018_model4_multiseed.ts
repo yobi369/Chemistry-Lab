@@ -102,7 +102,7 @@ function run(variant: QinModel4Variant, seed: number) {
       failedReplicates++;
     }
   }
-  const minimum = Math.ceil(replicates * 0.8);
+  const minimum = Math.ceil(replicates * 0.95);
   if (convergedReplicates < minimum)
     throw new Error(variant + ' bootstrap produced only ' + convergedReplicates + '/' + replicates +
       ' converged fits; at least ' + minimum + ' are required.');
@@ -118,7 +118,7 @@ function run(variant: QinModel4Variant, seed: number) {
     // Retain every converged replicate so reviewers can inspect skew, multimodality,
     // outliers and boundary pile-ups rather than relying only on percentile summaries.
     bootstrapSamples: samples,
-    requestedReplicates: replicates, convergedReplicates, failedReplicates,
+    requestedReplicates: replicates, minimumRequiredConverged: minimum, convergedReplicates, failedReplicates,
     seed, resamplingUnit: 'experimental series, stratified within iron type',
   };
 }
