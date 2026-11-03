@@ -42,15 +42,15 @@ for offset in range(0, len(headers), 3):
         "observations": observations,
     })
 
-# The 4L/4G table's 207/211 df counts imply this candidate set:
-# all t>0 observations plus all seven CMC-nZVI t=0 observations.
-fit_series = [
-    {**s, "observations": [(t, y) for t, y in s["observations"] if t > 0 or s["iron"] == "CMC-nZVI"]}
-    for s in series
-]
+# Published Model 4 Tables S5/S6 list 31 conditions. Four additional
+# CMC-nZVI dithionite/thiosulfite series remain in the raw CSV but are absent
+# from the published coefficient tables. Retain all nine observations for
+# each of the 31 listed conditions.
+excluded_ids = {"64", "65", "68", "69"}
+fit_series = [s for s in series if s["id"] not in excluded_ids]
 types = list(dict.fromkeys(s["iron"] for s in fit_series))
-if len(series) != 35 or sum(len(s["observations"]) for s in fit_series) != 287:
-    raise RuntimeError("Expected 35 series and 287 candidate Model 4 observations.")
+if len(series) != 35 or len(fit_series) != 31 or sum(len(s["observations"]) for s in fit_series) != 279:
+    raise RuntimeError("Expected 31 published Model 4 conditions and 279 observations.")
 
 paper4l = {
     "Alfa": (0.4113, 0.0076), "Beijing": (0.1338, 0.0008),
