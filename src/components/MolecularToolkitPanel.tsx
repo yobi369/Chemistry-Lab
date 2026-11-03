@@ -37,7 +37,7 @@ export const MolecularToolkitPanel: React.FC = () => {
         <div><p className="text-zinc-500">Toolkit</p><p className="mt-1 font-mono text-zinc-200">{result.toolkitVersion}</p></div>
       </div>
       <details><summary className="cursor-pointer text-zinc-400">RDKit descriptors & stereochemical structure JSON</summary><pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-zinc-900 p-2 text-[10px] text-zinc-300">{JSON.stringify({descriptors:result.descriptors,structure:result.structureJson},null,2)}</pre></details>
-      <p className="text-[10px] text-zinc-500">RDKit molecule memory is released after analysis. Structure processing is local; the pinned runtime and WASM binary are fetched from jsDelivr on first use.</p>
+      <p className="text-[10px] text-zinc-500">RDKit molecule memory is released after analysis. Structure processing is local; the pinned runtime and WASM binary are served from this deployment and cached for offline use after the first visit.</p>
     </div>}
   </article>;
 };
