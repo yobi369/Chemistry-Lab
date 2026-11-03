@@ -50,6 +50,7 @@ function summarize(fit: ReturnType<typeof fitQinModel4>) {
     weightedResidualSumSquares: fit.weightedResidualSumSquares,
     reducedChiSquare: fit.reducedChiSquare,
     ratesByIronType: fit.rateConstantsPerHour,
+    localAmplitudes: fit.localAmplitudesMicromoles,
     alfaBlank: fit.localAmplitudesMicromoles['35'],
     identifiable: fit.locallyIdentifiable,
     conditionNumber: fit.informationConditionNumber,
