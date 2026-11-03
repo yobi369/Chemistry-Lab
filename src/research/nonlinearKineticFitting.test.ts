@@ -104,4 +104,34 @@ test('multi-step nonlinear mass-action kinetic fitting', async t => {
     assert.ok(Math.abs(fit.parameterEstimates.k2-scipy.parameters.k2) <= fixture.typescript_fit.parameter_tolerance);
     assert.ok(Math.abs(fit.weightedResidualSumSquares-scipy.weighted_residual_sum_squares) <= fixture.typescript_fit.weighted_rss_tolerance);
   });
+  await t.test('fits a sequential mechanism using the adaptive implicit solver and reports solver work', () => {
+    const observations = [0,0.5,1,1.5,2,3,4,5].flatMap(timeSeconds => [
+      {timeSeconds,speciesId:'A',value:Math.exp(-0.7*timeSeconds)},
+      {timeSeconds,speciesId:'B',value:0.7/(0.25-0.7)*(Math.exp(-0.7*timeSeconds)-Math.exp(-0.25*timeSeconds))},
+      {timeSeconds,speciesId:'C',value:1-Math.exp(-0.7*timeSeconds)-0.7/(0.25-0.7)*(Math.exp(-0.7*timeSeconds)-Math.exp(-0.25*timeSeconds))},
+    ]);
+    const fit = fitMassActionMechanism(sequential, [
+      {...parameters[0],initialGuess:0.55},
+      {...parameters[1],initialGuess:0.4},
+    ], observations, {
+      integrationMethod:'adaptive-implicit',
+      maxIterations:80,
+      convergenceTolerance:1e-7,
+      adaptiveImplicitOptions:{
+        relativeTolerance:2e-7,
+        absoluteTolerance:1e-11,
+        maximumStepSeconds:0.25,
+        maximumSteps:200000,
+      },
+    });
+    assert.equal(fit.integrationMethod,'adaptive-implicit');
+    assert.equal(fit.model,'mass-action-mechanism-adaptive-implicit-levenberg-marquardt');
+    assert.ok(Math.abs(fit.parameterEstimates.k1-0.7)<0.015,JSON.stringify(fit.parameterEstimates));
+    assert.ok(Math.abs(fit.parameterEstimates.k2-0.25)<0.015,JSON.stringify(fit.parameterEstimates));
+    assert.ok(fit.integrationDiagnostics.simulationCalls>1);
+    assert.ok(fit.integrationDiagnostics.acceptedSteps>0);
+    assert.ok(fit.integrationDiagnostics.newtonIterations>0);
+    assert.equal(fit.fitted.length,observations.length);
+  });
+
 });
