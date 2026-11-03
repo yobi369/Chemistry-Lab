@@ -1,6 +1,6 @@
 export interface LocalFitStatistics {
   readonly parameterNames: readonly string[];
-  readonly standardErrors: Readonly<Record<string, number>> | null;
+  readonly standardErrors: Readonly<Record<string, number | null>> | null;
   readonly covarianceMatrix: readonly (readonly number[])[] | null;
   readonly correlationMatrix: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
   readonly identifiableParameterCount: number;
@@ -48,6 +48,7 @@ export function calculateLocalFitStatistics(
   const jacobian = base.map((_, i) => columns.map(column => column[i]));
   const norms = columns.map(column => Math.sqrt(column.reduce((sum, v) => sum + v*v, 0)));
   const basis: number[][] = [];
+  const independentIndices: number[] = [];
   for (let c = 0; c < n; c++) {
     if (norms[c] <= 1e-14) continue;
     const v = columns[c].map(x => x / norms[c]);
@@ -56,7 +57,7 @@ export function calculateLocalFitStatistics(
       for (let i = 0; i < v.length; i++) v[i] -= projection*q[i];
     }
     const norm = Math.sqrt(v.reduce((sum, x) => sum + x*x, 0));
-    if (norm > 1e-8) basis.push(v.map(x => x / norm));
+    if (norm > 1e-8) { basis.push(v.map(x => x / norm)); independentIndices.push(c); }
   }
   const rank = basis.length;
   const information = Array.from({ length: n }, (_, a) =>
@@ -66,12 +67,27 @@ export function calculateLocalFitStatistics(
   const condition = minEigen <= maxEigen * 1e-14 || minEigen <= 0
     ? Number.POSITIVE_INFINITY : maxEigen / minEigen;
   const inverse = invert(information);
-  if (!inverse || rank < n) return {
-    parameterNames, standardErrors: null, covarianceMatrix: null, correlationMatrix: null,
-    identifiableParameterCount: rank, locallyIdentifiable: false,
-    informationConditionNumber: condition,
-    warnings: ['Local covariance is singular or rank deficient; parameter standard errors are not reported.'],
-  };
+  if (rank < n || !inverse) {
+    const reduced = independentIndices.map(i => independentIndices.map(j => information[i][j]));
+    const reducedInverse = invert(reduced);
+    if (!reducedInverse) return {
+      parameterNames, standardErrors: null, covarianceMatrix: null, correlationMatrix: null,
+      identifiableParameterCount: rank, locallyIdentifiable: false,
+      informationConditionNumber: condition,
+      warnings: ['Local information matrix is rank deficient; no stable conditional covariance could be calculated.'],
+    };
+    const reducedCovariance = reducedInverse.map(row => row.map(v => v * covarianceScale));
+    const errors: Record<string, number | null> = Object.fromEntries(parameterNames.map(name => [name, null]));
+    independentIndices.forEach((originalIndex, reducedIndex) => {
+      errors[parameterNames[originalIndex]] = Math.sqrt(Math.max(0, reducedCovariance[reducedIndex][reducedIndex]));
+    });
+    return {
+      parameterNames, standardErrors: errors, covarianceMatrix: null, correlationMatrix: null,
+      identifiableParameterCount: rank, locallyIdentifiable: false,
+      informationConditionNumber: condition,
+      warnings: ['Full covariance is rank deficient; standard errors are reported only for the numerically identifiable parameter subset. Null entries are not estimable.'],
+    };
+  }
   const covariance = inverse.map(row => row.map(v => v * covarianceScale));
   const errors = Object.fromEntries(parameterNames.map((name, i) =>
     [name, Math.sqrt(Math.max(0, covariance[i][i]))]));
