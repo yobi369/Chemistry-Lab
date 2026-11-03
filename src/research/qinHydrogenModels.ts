@@ -27,7 +27,7 @@ export interface QinAlternativeFit {
   readonly reducedChiSquareConvention: 'weighted-residual-sum-of-squares/df' | 'unweighted-residual-sum-of-squares/df';
   readonly iterations: number;
   readonly converged: boolean;
-  readonly standardErrors: Readonly<Record<string, number>> | null;
+  readonly standardErrors: Readonly<Record<string, number | null>> | null;
   readonly covarianceMatrix: readonly (readonly number[])[] | null;
   readonly correlationMatrix: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
   readonly identifiableParameterCount: number;
