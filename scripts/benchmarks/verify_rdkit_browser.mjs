@@ -71,6 +71,14 @@ await page.addInitScript(() => {
 
 try {
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  const closeOnboarding = async () => {
+    const closeButton = page.getByRole('button', { name: 'Close onboarding tour' });
+    if (await closeButton.isVisible().catch(() => false)) {
+      for (let step = 0; step < 5; step++) await page.getByRole('button', { name: 'Next Step' }).click();
+      await page.getByRole('button', { name: 'Start Exploring' }).click();
+    }
+  };
+  await closeOnboarding();
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   await page.reload({ waitUntil: 'networkidle' });
   assert.equal(await page.evaluate(() => Boolean(navigator.serviceWorker.controller)), true,
