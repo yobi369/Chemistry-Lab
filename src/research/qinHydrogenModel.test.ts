@@ -83,3 +83,32 @@ test('bootstrap refits can skip local covariance while preserving fitted paramet
   assert.ok(Math.abs(fit.rateConstantsPerHour.Alfa.k1PerHour - 0.42) < 1e-4);
   assert.ok(fit.warnings.some(warning => warning.includes('skipped by caller')));
 });
+
+test('conditional profile refit holds the requested rate exactly and refits free rates', () => {
+  const data = [
+    makeSeries('a1', 'Alfa', 0.42, 0.008, 2.2, 20.5),
+    makeSeries('a2', 'Alfa', 0.42, 0.008, 1.2, 3.2),
+    makeSeries('b1', 'Beijing', 0.14, 0.001, 1.9, 73.5),
+    makeSeries('b2', 'Beijing', 0.14, 0.001, 2.7, 50.6),
+  ];
+  const fit = fitQinModel4('4L', data, {
+    weighting: 'unweighted', zeroStandardDeviation: 'unweighted',
+    fixedRateConstantsPerHour: { 'Alfa.k1PerHour': 0.42 },
+  });
+  assert.equal(fit.converged, true);
+  assert.ok(Math.abs(fit.rateConstantsPerHour.Alfa.k1PerHour - 0.42) < 1e-14);
+  assert.ok(Math.abs(fit.rateConstantsPerHour.Alfa.k2PerHour - 0.008) < 1e-5);
+  assert.equal(fit.covarianceMatrix, null);
+  assert.ok(fit.warnings.some(warning => warning.includes('Conditional profile refit')));
+});
+
+test('conditional profile refit rejects unknown and out-of-range fixed rates', () => {
+  const data = [makeSeries('a1', 'Alfa', 0.42, 0.008, 2.2, 20.5)];
+  const base = { weighting: 'unweighted' as const, zeroStandardDeviation: 'unweighted' as const };
+  assert.throws(() => fitQinModel4('4L', data, {
+    ...base, fixedRateConstantsPerHour: { 'Unknown.k2PerHour': 0.1 },
+  }), /Unknown fixed rate/);
+  assert.throws(() => fitQinModel4('4L', data, {
+    ...base, fixedRateConstantsPerHour: { 'Alfa.k2PerHour': 11 },
+  }), /between 1e-8 and 10/);
+});

@@ -24,6 +24,8 @@ export interface QinModel4Options {
   readonly tolerance?: number;
   /** Set false for bootstrap refits that only need parameter estimates, not local covariance. */
   readonly calculateUncertainty?: boolean;
+  /** Fixed rate constants for conditional profile refits, keyed like Beijing.k2PerHour or GLOBAL.k1PerHour. */
+  readonly fixedRateConstantsPerHour?: Readonly<Record<string, number>>;
 }
 export interface QinModel4Fit {
   readonly model: QinModel4Variant;
@@ -166,6 +168,17 @@ export function fitQinModel4(
   });
   if (initial.some(v => !finite(v) || v < Math.log(1e-8) || v > Math.log(10)))
     throw new QinModel4FitError('Initial rates must be finite and between 1e-8 and 10 h^-1.');
+  const fixedRateIndices = new Map<number, number>();
+  for (const [name, value] of Object.entries(options.fixedRateConstantsPerHour ?? {})) {
+    const index = rateKeys.findIndex(key => (key === 'GLOBAL:k1' ? 'GLOBAL.k1PerHour' :
+      key.replace(':', '.').replace('k1', 'k1PerHour').replace('k2', 'k2PerHour')) === name);
+    if (index < 0) throw new QinModel4FitError('Unknown fixed rate parameter: ' + name);
+    if (!finite(value) || value < 1e-8 || value > 10)
+      throw new QinModel4FitError('Fixed rates must be finite and between 1e-8 and 10 h^-1.');
+    fixedRateIndices.set(index, value);
+    initial[index] = Math.log(value);
+  }
+  const freeIndices = initial.map((_, index) => index).filter(index => !fixedRateIndices.has(index));
 
   const ratesFor = (theta: readonly number[], type: QinIronType) => {
     const k1 = variant === '4L'
@@ -191,21 +204,22 @@ export function fitQinModel4(
     }
     return { amplitudes, residuals, cost };
   };
-  let theta = [...initial], current = evaluate(theta), lambda = 1e-3, converged = false, iterations = 0;
+  let theta = [...initial], current = evaluate(theta), lambda = 1e-3;
+  let converged = freeIndices.length === 0, iterations = 0;
   const jacobianAt = (point: readonly number[], base: readonly number[]) => {
-    const columns = point.map((value, j) => {
+    const columns = freeIndices.map(index => {
       const step = 1e-4;
       const plus = [...point], minus = [...point];
-      plus[j] = Math.min(Math.log(10), value + step);
-      minus[j] = Math.max(Math.log(1e-8), value - step);
+      plus[index] = Math.min(Math.log(10), point[index] + step);
+      minus[index] = Math.max(Math.log(1e-8), point[index] - step);
       const rp = evaluate(plus).residuals, rm = evaluate(minus).residuals;
-      const width = plus[j] - minus[j];
+      const width = plus[index] - minus[index];
       return rp.map((v, i) => (v - rm[i]) / width);
     });
     return base.map((_, i) => columns.map(col => col[i]));
   };
-  for (; iterations < maxIterations; iterations++) {
-    const j = jacobianAt(theta, current.residuals), n = theta.length;
+  for (; iterations < maxIterations && freeIndices.length > 0; iterations++) {
+    const j = jacobianAt(theta, current.residuals), n = freeIndices.length;
     const normal = Array.from({ length: n }, (_, a) =>
       Array.from({ length: n }, (_, b) => j.reduce((sum, row) => sum + row[a] * row[b], 0)));
     const gradient = Array.from({ length: n }, (_, a) =>
@@ -214,7 +228,13 @@ export function fitQinModel4(
       v + (i === k ? lambda * Math.max(normal[i][i], 1e-10) : 0)));
     const delta = solve(damped, gradient.map(v => -v));
     if (!delta) break;
-    const candidate = theta.map((v, i) => Math.max(Math.log(1e-8), Math.min(Math.log(10), v + delta[i])));
+    if (Math.sqrt(dot(delta, delta)) < tolerance) {
+      converged = true; iterations++; break;
+    }
+    const candidate = [...theta];
+    freeIndices.forEach((index, i) => {
+      candidate[index] = Math.max(Math.log(1e-8), Math.min(Math.log(10), theta[index] + delta[i]));
+    });
     const next = evaluate(candidate);
     if (next.cost < current.cost) {
       const improvement = current.cost - next.cost;
@@ -277,7 +297,7 @@ export function fitQinModel4(
   const covarianceScale = degreesOfFreedom > 0
     ? (options.weighting === 'standard-deviation' ? 1 : current.cost / degreesOfFreedom)
     : 1;
-  const statistics = options.calculateUncertainty === false || degreesOfFreedom <= 0
+  const statistics = options.calculateUncertainty === false || degreesOfFreedom <= 0 || fixedRateIndices.size > 0
     ? null
     : calculateLocalFitStatistics(parameterNames, parameterValues, residualAt, covarianceScale);
   const warnings: string[] = [];
@@ -286,7 +306,8 @@ export function fitQinModel4(
   if (boundaryRates.length) warnings.push('Rate estimates reached optimizer bounds: ' + boundaryRates.join(', ') + '; treat these as boundary-limited, not precise point estimates.');
   if (degreesOfFreedom <= 0) warnings.push('Non-positive residual degrees of freedom; uncertainty statistics are not defined.');
   if (statistics) warnings.push(...statistics.warnings);
-  if (options.calculateUncertainty === false) warnings.push('Local covariance diagnostics were skipped by caller; this fit was used for bootstrap parameter estimation only.');
+  if (options.calculateUncertainty === false) warnings.push('Local covariance diagnostics were skipped by caller; this fit was used for parameter estimation only.');
+  if (fixedRateIndices.size > 0) warnings.push('Conditional profile refit: ' + fixedRateIndices.size + ' rate parameter(s) held fixed; full-fit covariance diagnostics are intentionally unavailable.');
   if (excludedZeroStandardDeviationCount) warnings.push(excludedZeroStandardDeviationCount + ' zero-SD observations were excluded from the weighted objective by explicit policy.');
   if (variant === '4G') warnings.push('4G constrains k1 to one shared value across the full dataset; k2 remains grouped by iron type.');
   return {
