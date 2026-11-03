@@ -4,7 +4,7 @@
 
 The production build stages the exact `@rdkit/rdkit@2026.9.1` MinimalLib JavaScript and WASM files into `public/vendor/rdkit/` before Vite builds `dist/`. The package is installed in CI and by the Vercel build command; it is not added to the browser bundle as a remote script dependency. The asset-copy script fails closed in CI/Vercel if the pinned package or expected WASM files are missing.
 
-The browser adapter loads `/vendor/rdkit/RDKit_minimal.js` first and resolves the WASM file against the same-origin asset directory. It checks the actual runtime version. A pinned jsDelivr URL is retained as a recovery path if local assets are missing or fail to initialize; normal production operation should not request the CDN.
+The browser adapter loads `/vendor/rdkit/2026.9.1/RDKit_minimal.js` first and resolves the WASM file against the same-origin asset directory. It checks the actual runtime version. A pinned jsDelivr URL is retained as a recovery path if local assets are missing or fail to initialize; normal production operation should not request the CDN.
 
 ## Content Security Policy
 
@@ -29,7 +29,7 @@ The service worker uses cache-first behavior for hashed assets and RDKit runtime
 CI installs Chromium and runs `scripts/benchmarks/verify_rdkit_browser.mjs` against the built static output, served with the exact response headers from `vercel.json`. It verifies:
 1. The service worker controls the app after activation/reload.
 2. The Research Lab molecular toolkit loads and identifies the default stereochemical reference molecule.
-3. RDKit JavaScript and WASM are requested from same-origin `/vendor/rdkit/` paths, not the CDN.
+3. RDKit JavaScript and WASM are requested from same-origin `/vendor/rdkit/2026.9.1/` paths, not the CDN.
 4. No Content Security Policy violations or uncaught browser errors occur.
 5. A browser offline reload still loads the app and performs RDKit analysis using cached assets.
 
@@ -37,7 +37,7 @@ A separate local asset integrity check validates the RDKit manifest, file presen
 
 ## Observed Vercel preview HTTP validation
 
-The Vercel preview for the local-assets implementation reached `READY` at deployment `dpl_EHXzwypzesUtrYrVTTrmjGrqNMoy` (branch `deployment/rdkit-local-assets-csp-v1`, commit `eef72cef40448305c910aff540ca5d9fb7d54072`). Authenticated deployment fetches returned HTTP 200 for the application root, `/sw.js`, `/vendor/rdkit/manifest.json`, `/vendor/rdkit/RDKit_minimal.js`, and `/vendor/rdkit/RDKit_minimal.wasm`.
+The Vercel preview for the local-assets implementation reached `READY` at deployment `dpl_EHXzwypzesUtrYrVTTrmjGrqNMoy` (branch `deployment/rdkit-local-assets-csp-v1`, commit `eef72cef40448305c910aff540ca5d9fb7d54072`). Authenticated deployment fetches returned HTTP 200 for the application root, `/sw.js`, `/vendor/rdkit/2026.9.1/manifest.json`, `/vendor/rdkit/RDKit_minimal.js`, and `/vendor/rdkit/2026.9.1/RDKit_minimal.wasm`.
 
 Observed response properties:
 - The root document returns the configured Content-Security-Policy, including `'wasm-unsafe-eval'`, same-origin scripts, the pinned CDN fallback, Google Fonts, and Vercel preview feedback origins.
