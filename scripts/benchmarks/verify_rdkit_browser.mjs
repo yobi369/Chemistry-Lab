@@ -23,7 +23,7 @@ const mime = {
 const server = createServer(async (request, response) => {
   try {
     const pathname = decodeURIComponent(new URL(request.url ?? '/', 'http://localhost').pathname);
-    let file = path.resolve(dist, '.' + pathname);
+    let file = pathname === '/' ? path.join(dist, 'index.html') : path.resolve(dist, '.' + pathname);
     if (!file.startsWith(dist + path.sep) && file !== path.join(dist, 'index.html')) {
       response.writeHead(403, commonHeaders).end('Forbidden');
       return;
