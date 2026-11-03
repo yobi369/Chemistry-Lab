@@ -100,6 +100,14 @@ jobs:
           name: stiff-kinetic-fit-scipy-reference
           path: /tmp/stiff-kinetic-fit-scipy.json
           retention-days: 30
+      - name: Verify stiff reversible slow-drain network against independent SciPy BDF and Radau
+        run: python scripts/benchmarks/verify_scipy_stiff_reversible_slow_drain.py > /tmp/stiff-reversible-slow-drain-scipy.json
+      - name: Archive independent SciPy stiff-network fit reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: stiff-reversible-slow-drain-scipy-reference
+          path: /tmp/stiff-reversible-slow-drain-scipy.json
+          retention-days: 30
       - name: Reproduce independent BDF and Radau reference fixtures
         run: python scripts/benchmarks/verify_scipy_references.py
       - name: Verify independent nonlinear kinetic fitting benchmark
