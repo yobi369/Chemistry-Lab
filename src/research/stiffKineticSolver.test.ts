@@ -23,7 +23,7 @@ test('adaptive implicit mass-action solver for stiff kinetics', async t => {
       robertson,
       {r1:0.04,r2:1e4,r3:3e7},
       times,
-      {relativeTolerance:2e-6,absoluteTolerance:1e-12,maximumStepSeconds:1e4,maximumSteps:500000},
+      {relativeTolerance:2e-7,absoluteTolerance:1e-13,maximumStepSeconds:1e4,maximumSteps:500000},
     );
     assert.equal(result.results.length,times.length);
     assert.ok(result.acceptedSteps>0);
