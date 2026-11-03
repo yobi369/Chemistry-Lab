@@ -6,6 +6,7 @@
  */
 export const RDKIT_VERSION = '2026.9.1';
 export const RDKIT_CDN_BASE = `https://cdn.jsdelivr.net/npm/@rdkit/rdkit@${RDKIT_VERSION}/dist/`;
+export const RDKIT_LOCAL_BASE = '/vendor/rdkit/';
 
 export interface RDKitMolecule {
   get_smiles(options?: string): string;
@@ -42,33 +43,51 @@ declare global {
   }
 }
 
-/** Load the pinned official RDKit.js WASM runtime once per page. */
+async function loadScript(src: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.dataset.chemistryLabRdkit = 'true';
+    script.onload = () => resolve();
+    script.onerror = () => {
+      script.remove();
+      reject(new Error(`Could not load RDKit.js script from ${src}.`));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+/** Load the pinned official RDKit.js WASM runtime once per page, preferring same-origin assets. */
 export async function loadRDKitToolkit(): Promise<RDKitModule> {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     throw new Error('RDKit.js is a browser WebAssembly toolkit and requires a browser environment.');
   }
   if (window.__chemistryLabRDKitPromise) return window.__chemistryLabRDKitPromise;
   window.__chemistryLabRDKitPromise = (async () => {
-    if (!window.initRDKitModule) {
-      await new Promise<void>((resolve, reject) => {
-        const existing = document.querySelector<HTMLScriptElement>('script[data-chemistry-lab-rdkit="true"]');
-        if (existing) {
-          existing.addEventListener('load', () => resolve(), { once: true });
-          existing.addEventListener('error', () => reject(new Error('Could not load the RDKit.js script.')), { once: true });
-          return;
+    const localBase = new URL(RDKIT_LOCAL_BASE, window.location.origin).toString();
+    const candidates = [
+      { label: 'same-origin packaged assets', base: localBase, script: new URL('RDKit_minimal.js', localBase).toString() },
+      { label: 'pinned jsDelivr fallback', base: RDKIT_CDN_BASE, script: `${RDKIT_CDN_BASE}RDKit_minimal.js` },
+    ];
+    const failures: string[] = [];
+    for (const candidate of candidates) {
+      try {
+        if (!window.initRDKitModule) await loadScript(candidate.script);
+        if (!window.initRDKitModule) throw new Error('RDKit.js script loaded without exposing its WebAssembly initializer.');
+        const module = await window.initRDKitModule({
+          locateFile: file => new URL(file, candidate.base).toString(),
+        });
+        if (String(module.version()).split('.').map(part => String(Number(part))).join('.') !== RDKIT_VERSION) {
+          throw new Error(`Expected RDKit ${RDKIT_VERSION}, received ${module.version()}.`);
         }
-        const script = document.createElement('script');
-        script.src = `${RDKIT_CDN_BASE}RDKit_minimal.js`;
-        script.async = true;
-        script.crossOrigin = 'anonymous';
-        script.dataset.chemistryLabRdkit = 'true';
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Could not load the pinned RDKit.js runtime from jsDelivr.'));
-        document.head.appendChild(script);
-      });
+        return module;
+      } catch (error) {
+        failures.push(`${candidate.label}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
-    if (!window.initRDKitModule) throw new Error('RDKit.js loaded without exposing its WebAssembly initializer.');
-    return window.initRDKitModule({ locateFile: file => new URL(file, RDKIT_CDN_BASE).toString() });
+    throw new Error(`Unable to initialize the pinned RDKit.js runtime. ${failures.join(' | ')}`);
   })().catch(error => {
     window.__chemistryLabRDKitPromise = undefined;
     throw error;
