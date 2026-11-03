@@ -19,7 +19,7 @@ The benchmark evaluates Model 4L Beijing/Hepure phase-2 rates and the correspond
 
 ## Corrected 31-condition profile results
 
-The refined 81-point grid plus 24-step log-space endpoint refinement on the 31-condition / 279-observation set produced the following results. The full report is archived as `qin-model4-profile-likelihood` in workflow run `41621518844` (commit `09e5075b0faf176c1ad8db99993841be47e6bac1`):
+The refined 81-point grid plus 24-step log-space endpoint refinement on the 31-condition / 279-observation set produced the following results. The full report is archived as `qin-model4-profile-likelihood` in workflow run `41624945167` (commit `d51439c1da5e16363f294743782705a34261651f`):
 
 | Model / parameter | Primary accepted region (h^-1) | Additional accepted region |
 |---|---:|---:|
