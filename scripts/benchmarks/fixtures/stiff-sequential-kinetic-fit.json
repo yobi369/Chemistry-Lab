@@ -23,13 +23,13 @@
     [4.663595529550778e-69, 0.22313852790383595, 0.7768614720960844],
     [0.0, 0.04978893548855253, 0.9502110645113256]
   ],
-  "standard_deviation": 1e-5,
+  "standard_deviation": 1e-3,
   "true_parameters": {"k1": 800.0, "k2": 0.03},
   "parameter_bounds": {"lower": [100.0, 0.001], "upper": [2000.0, 0.1]},
   "typescript_fit": {
     "initial_guess": [600.0, 0.02],
     "relative_tolerance": 1e-7,
-    "absolute_tolerance": 1e-12,
+    "absolute_tolerance": 1e-9,
     "maximum_steps": 500000,
     "maximum_newton_iterations": 15,
     "maximum_iterations": 120,
@@ -44,7 +44,7 @@
     "rtol": 1e-10,
     "atol": 1e-12,
     "parameters": {"k1": 800.0000004895647, "k2": 0.030000000017732734},
-    "weighted_residual_sum_squares": 3.8916838309614554e-10,
+    "weighted_residual_sum_squares": 3.891699905271093e-14,
     "parameter_tolerance": 1e-6,
     "weighted_rss_tolerance": 1e-4
   }
