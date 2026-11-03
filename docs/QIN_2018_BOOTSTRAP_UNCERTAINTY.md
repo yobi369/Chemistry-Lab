@@ -19,6 +19,20 @@ bun run scripts/benchmarks/bootstrap_qin_2018_model4.ts \
 
 Use 200–500 replicates for exploratory reporting and inspect the returned convergence count, interval shape and rate-bound warnings before interpretation. The quality workflow runs a deterministic 20-replicate smoke benchmark and archives its JSON output; that short CI run verifies the pipeline and reproducibility only. It is not a publication-grade interval estimate.
 
+## Multi-seed experiment (200–500 replicates per seed)
+
+Run at least three independent deterministic seeds, with 200 or more replicates per seed:
+
+```bash
+bun run scripts/benchmarks/bootstrap_qin_2018_model4_multiseed.ts \
+  data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv \
+  200 20261103,20261104,20261105
+```
+
+The multi-seed report records each seed's Model 4L and 4G percentile intervals, convergence/failure counts, and per-parameter lower/upper optimizer-bound hit counts. It also reports the across-seed ranges of lower, median and upper percentile endpoints, plus relative spread of the upper endpoint. These ranges are stability diagnostics, not confidence intervals. Do not pool or average the seed-specific intervals without a separately justified statistical procedure.
+
+The quality workflow keeps the 20-replicate smoke test and additionally runs the 200-replicate, three-seed experiment, archiving the complete JSON report. This produces 600 resamples per model across independent seeded streams. Review each seed separately: a stable median with unstable upper endpoints, repeated lower-bound hits, or substantial convergence failures still indicates weak identification.
+
 ## Interpretation and limitations
 
 This is a **stratified experimental-condition cluster bootstrap**, not a residual bootstrap, parametric measurement-error bootstrap, profile likelihood, or Bayesian posterior. It measures how the fitted rate estimates vary when the available experimental conditions are resampled within each iron type. It preserves within-series time dependence and each selected series' observed time grid, but does not generate new measurement noise.
