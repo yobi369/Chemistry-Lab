@@ -151,6 +151,24 @@ def profile_fit(model, fixed_key=None, fixed_rate=None, start=None):
     }
 
 
+def profile_fit_multistart(model, fixed_key, fixed_rate, warm, baseline):
+    # Independent deterministic starts: continuation, baseline, and perturbed
+    # log-rate vectors. Select the best valid conditional objective.
+    seeds = [np.asarray(warm, dtype=float), baseline["theta"]]
+    for factor in (0.1, 10.0, 0.03, 3.0, 0.3):
+        for direction in (1.0, -1.0):
+            signs = np.where(np.arange(len(baseline["theta"])) % 2 == 0, 1.0, -1.0)
+            seeds.append(np.clip(
+                baseline["theta"] + direction * math.log(factor) * signs,
+                LOWER, UPPER,
+            ))
+    candidates = [
+        profile_fit(model, fixed_key, fixed_rate, start=seed)
+        for seed in seeds
+    ]
+    return min(candidates, key=lambda item: item["objective"])
+
+
 def likelihood_statistic(objective, minimum, n):
     if objective <= 0 or minimum <= 0:
         return None
@@ -177,13 +195,13 @@ def connected_components(points, minimum, n):
     return components
 
 
-def refine_endpoint(model, fixed_key, outside, inside, side, minimum, n, start):
+def refine_endpoint(model, fixed_key, outside, inside, side, minimum, n, start, baseline):
     lo = math.log(min(outside, inside))
     hi = math.log(max(outside, inside))
     for _ in range(24):
         midpoint = (lo + hi) / 2
         rate = math.exp(midpoint)
-        fit = profile_fit(model, fixed_key, rate, start=start)
+        fit = profile_fit_multistart(model, fixed_key, rate, start, baseline)
         statistic = likelihood_statistic(fit["objective"], minimum, n)
         accepted = statistic is not None and statistic <= CUTOFF
         if side == "lower":
@@ -199,7 +217,7 @@ def refine_endpoint(model, fixed_key, outside, inside, side, minimum, n, start):
     return math.exp((lo + hi) / 2)
 
 
-def interval_for_component(model, fixed_key, component, all_points, minimum, n, start):
+def interval_for_component(model, fixed_key, component, all_points, minimum, n, start, baseline):
     first, last = component[0], component[-1]
     first_index = all_points.index(first)
     last_index = all_points.index(last)
@@ -207,11 +225,11 @@ def interval_for_component(model, fixed_key, component, all_points, minimum, n, 
     upper_limited = last_index == len(all_points) - 1
     lower = first["ratePerHour"] if lower_limited else refine_endpoint(
         model, fixed_key, all_points[first_index - 1]["ratePerHour"],
-        first["ratePerHour"], "lower", minimum, n, start,
+        first["ratePerHour"], "lower", minimum, n, start, baseline,
     )
     upper = last["ratePerHour"] if upper_limited else refine_endpoint(
         model, fixed_key, all_points[last_index + 1]["ratePerHour"],
-        last["ratePerHour"], "upper", minimum, n, start,
+        last["ratePerHour"], "upper", minimum, n, start, baseline,
     )
     return {
         "lowerPerHour": lower,
@@ -234,27 +252,9 @@ for ts_result in ts_report["results"]:
     scipy_points = []
     warm_start = baseline["theta"]
 
-    def multistart_profile_fit(rate, warm):
-        # Independent multi-start mirrors the profile analysis strategy without
-        # importing its TypeScript optimizer. Include continuation and baseline
-        # starts, then deterministic multiplicative perturbations in log space.
-        seeds = [np.asarray(warm, dtype=float), baseline["theta"]]
-        for factor in (0.1, 10.0, 0.03, 3.0, 0.3):
-            for direction in (1.0, -1.0):
-                seeds.append(np.clip(
-                    baseline["theta"] + direction * math.log(factor)
-                    * np.where(np.arange(len(baseline["theta"])) % 2 == 0, 1.0, -1.0),
-                    LOWER, UPPER,
-                ))
-        candidates = []
-        for seed in seeds:
-            candidate = profile_fit(model, fixed_key, rate, start=seed)
-            candidates.append(candidate)
-        return min(candidates, key=lambda item: item["objective"])
-
     for ts_point in ts_points:
         rate = float(ts_point["ratePerHour"])
-        fit = multistart_profile_fit(rate, warm_start)
+        fit = profile_fit_multistart(model, fixed_key, rate, warm_start, baseline)
         warm_start = fit["theta"]
         scipy_points.append({
             "ratePerHour": rate,
@@ -294,7 +294,7 @@ for ts_result in ts_report["results"]:
     components = connected_components(scipy_points, minimum, n)
     scipy_intervals = [
         interval_for_component(
-            model, fixed_key, component, scipy_points, minimum, n, baseline["theta"]
+            model, fixed_key, component, scipy_points, minimum, n, baseline["theta"], baseline
         )
         for component in components
     ]
