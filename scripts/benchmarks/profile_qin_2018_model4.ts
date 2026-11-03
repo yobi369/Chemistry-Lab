@@ -82,24 +82,51 @@ function profile(model: QinModel4Variant, parameter: string) {
     return { ratePerHour: rate, objective: fit.sumSquaredResiduals, converged: fit.converged,
       iterations: fit.iterations, warnings: fit.warnings };
   });
-  const minObjective = baseline.sumSquaredResiduals;
+  const profileMinimumObjective = Math.min(
+    baseline.sumSquaredResiduals,
+    ...evaluations.filter(point => point.converged).map(point => point.objective),
+  );
   const withLikelihood = evaluations.map(p => ({
     ...p,
-    likelihoodRatioStatistic: minObjective > 0 && p.objective > 0 ? n * Math.log(p.objective / minObjective) : null,
+    likelihoodRatioStatistic: profileMinimumObjective > 0 && p.objective > 0
+      ? n * Math.log(p.objective / profileMinimumObjective) : null,
   }));
   const accepted = withLikelihood.filter(p => p.converged && p.likelihoodRatioStatistic !== null &&
     p.likelihoodRatioStatistic! <= cutoff);
-  const lower = accepted.length ? accepted[0].ratePerHour : null;
-  const upper = accepted.length ? accepted[accepted.length - 1].ratePerHour : null;
-  const boundaryLimited = {
-    lower: lower === points[0],
-    upper: upper === points[points.length - 1],
-  };
+  const components: typeof accepted[] = [];
+  let component: typeof accepted = [];
+  for (const point of withLikelihood) {
+    if (point.converged && point.likelihoodRatioStatistic !== null &&
+        point.likelihoodRatioStatistic <= cutoff) {
+      component.push(point);
+    } else if (component.length) {
+      components.push(component); component = [];
+    }
+  }
+  if (component.length) components.push(component);
+  const bestPoint = withLikelihood.reduce((best, point) =>
+    point.converged && (point.likelihoodRatioStatistic ?? Infinity) <
+      (best.likelihoodRatioStatistic ?? Infinity) ? point : best, withLikelihood[0]);
+  const intervalFor = (pointsInComponent: typeof accepted) => ({
+    lowerPerHour: pointsInComponent[0].ratePerHour,
+    upperPerHour: pointsInComponent[pointsInComponent.length - 1].ratePerHour,
+    boundaryLimited: {
+      lower: pointsInComponent[0].ratePerHour === points[0],
+      upper: pointsInComponent[pointsInComponent.length - 1].ratePerHour === points[points.length - 1],
+    },
+  });
+  const bestComponent = components.find(c => c.some(p => p.ratePerHour === bestPoint.ratePerHour));
   return {
-    model, parameter, estimatePerHour: estimate, baselineObjective: minObjective,
+    model, parameter, baselineEstimatePerHour: estimate,
+    profileGridBestRatePerHour: bestPoint.ratePerHour,
+    baselineObjective: baseline.sumSquaredResiduals,
+    profileMinimumObjective,
+    profileGridImprovedBaseline: profileMinimumObjective < baseline.sumSquaredResiduals,
     likelihoodRatioCutoff95: cutoff, observationCount: n,
-    interval95GridApproximation: { lowerPerHour: lower, upperPerHour: upper, boundaryLimited },
-    baselinePointIncluded: points.includes(estimate),
+    interval95GridApproximation: bestComponent ? intervalFor(bestComponent) : null,
+    additionalAcceptedComponents: components.filter(c => c !== bestComponent).map(intervalFor),
+    acceptedGridComponentCount: components.length,
+    baselinePointIncluded: points.includes(profileEstimate),
     convergedProfilePoints: withLikelihood.filter(p => p.converged).length,
     failedProfilePoints: withLikelihood.filter(p => !p.converged).length,
     points: withLikelihood,
