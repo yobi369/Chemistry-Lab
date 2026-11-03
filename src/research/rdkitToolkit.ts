@@ -59,6 +59,13 @@ export async function loadRDKitToolkit(): Promise<RDKitModule> {
       if (manifest.version !== RDKIT_VERSION) throw new Error('Local RDKit asset version does not match the application pin.');
       const integrity = manifest.files?.['RDKit_minimal.js']?.integrity;
       if (!integrity?.startsWith('sha256-')) throw new Error('Local RDKit script integrity metadata is missing.');
+      const expectedWasmHash = manifest.files?.['RDKit_minimal.wasm']?.sha256;
+      if (!expectedWasmHash || !window.crypto?.subtle) throw new Error('Local RDKit WASM integrity verification is unavailable.');
+      const wasmResponse = await fetch(`${RDKIT_ASSET_BASE}RDKit_minimal.wasm`, { cache: 'force-cache' });
+      if (!wasmResponse.ok) throw new Error('Could not load the local RDKit WebAssembly binary.');
+      const wasmDigest = await window.crypto.subtle.digest('SHA-256', await wasmResponse.arrayBuffer());
+      const actualWasmHash = Array.from(new Uint8Array(wasmDigest), byte => byte.toString(16).padStart(2, '0')).join('');
+      if (actualWasmHash !== expectedWasmHash) throw new Error('Local RDKit WebAssembly checksum verification failed.');
       await new Promise<void>((resolve, reject) => {
         document.querySelector<HTMLScriptElement>('script[data-chemistry-lab-rdkit="true"]')?.remove();
         const script = document.createElement('script');
