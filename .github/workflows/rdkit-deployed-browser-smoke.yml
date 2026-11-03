@@ -1,0 +1,52 @@
+name: RDKit deployed browser and offline smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "bun.lock"
+      - "vercel.json"
+      - "src/main.tsx"
+      - "src/research/rdkitToolkit.ts"
+      - "src/components/MolecularToolkitPanel.tsx"
+      - "scripts/copy-rdkit-assets.mjs"
+      - "scripts/generate-build-meta.mjs"
+      - "scripts/generate-service-worker.mjs"
+      - "scripts/benchmarks/rdkit_deployed_browser_smoke.cjs"
+      - ".github/workflows/rdkit-deployed-browser-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deployed-browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out deployed source revision
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install isolated Playwright runner
+        run: npm install --prefix /tmp/playwright --no-save --no-package-lock --ignore-scripts playwright@1.56.1
+      - name: Install Chromium
+        run: /tmp/playwright/node_modules/.bin/playwright install --with-deps chromium
+      - name: Validate production RDKit, CSP and offline behavior
+        env:
+          NODE_PATH: /tmp/playwright/node_modules
+          RDKIT_SMOKE_BASE_URL: https://chemistry-lab-mocha.vercel.app
+          EXPECTED_COMMIT_SHA: ${{ github.sha }}
+          DEPLOYMENT_WAIT_TIMEOUT_MS: 600000
+        run: node scripts/benchmarks/rdkit_deployed_browser_smoke.cjs
+      - name: Upload deployed browser smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rdkit-deployed-browser-smoke
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 30
