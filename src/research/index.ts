@@ -22,3 +22,4 @@ export * from './reactionDiffusion2D';
 export * from './correlatedKineticUncertainty';
 export * from './stiffKineticSolver';
 export * from './experimentalCsv';
+export * from './qinHydrogenModel';
