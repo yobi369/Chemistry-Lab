@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "description": "Shared deterministic observations for cross-language sequential A -> B -> C nonlinear kinetic fitting.",
+  "species_ids": [
+    "A",
+    "B",
+    "C"
+  ],
+  "initial_concentrations": {
+    "A": 1,
+    "B": 0,
+    "C": 0
+  },
+  "times_seconds": [
+    0,
+    0.25,
+    0.5,
+    0.75,
+    1,
+    1.5,
+    2,
+    3,
+    4,
+    5
+  ],
+  "observed_concentrations": [
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      0.8398570207692073,
+      0.1546871765133065,
+      0.005455802717486152
+    ],
+    [
+      0.7036880897187134,
+      0.2771914866802609,
+      0.01912042360102566
+    ],
+    [
+      0.5923553643668151,
+      0.3690036170433548,
+      0.03864101858983006
+    ],
+    [
+      0.49598530379140954,
+      0.44000185665777053,
+      0.06401283955081995
+    ],
+    [
+      0.3501377491111554,
+      0.5241690461686038,
+      0.12569320472024065
+    ],
+    [
+      0.24619696394160648,
+      0.5600968600882642,
+      0.19370617597012932
+    ],
+    [
+      0.12305642825298195,
+      0.5441046380924953,
+      0.3328389336545227
+    ],
+    [
+      0.060610062625217974,
+      0.4780634777385712,
+      0.4613264596362109
+    ],
+    [
+      0.030597383422318502,
+      0.3983004209033558,
+      0.5711021956743256
+    ]
+  ],
+  "standard_deviation": 0.002,
+  "true_parameters": {
+    "k1": 0.7,
+    "k2": 0.25
+  },
+  "parameter_bounds": {
+    "lower": [
+      0.001,
+      0.001
+    ],
+    "upper": [
+      2,
+      2
+    ]
+  },
+  "initial_guesses": [
+    [
+      0.15,
+      0.15
+    ],
+    [
+      1.4,
+      0.8
+    ],
+    [
+      0.3,
+      1.2
+    ],
+    [
+      0.9,
+      0.05
+    ]
+  ],
+  "scipy_reference": {
+    "version": "1.17.0",
+    "parameters": {
+      "k1": 0.70005222,
+      "k2": 0.24996947
+    },
+    "weighted_residual_sum_squares": 1.716424342179119,
+    "parameter_tolerance": 0.003,
+    "weighted_rss_tolerance": 0.05
+  },
+  "typescript_fit": {
+    "initial_guess": [
+      0.15,
+      0.15
+    ],
+    "max_integration_step_seconds": 0.001,
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-10,
+    "parameter_tolerance": 0.004,
+    "weighted_rss_tolerance": 0.05
+  }
+}
