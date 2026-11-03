@@ -10,5 +10,11 @@
   "timeUnit": "hour",
   "hydrogenAmountUnit": "micromole",
   "standardDeviationUnit": "micromole",
-  "retrievalPolicy": "Download the versioned Zenodo file and verify its published checksum before parsing."
+  "retrievalPolicy": "The original CSV is vendored byte-for-byte in this directory; CI verifies the Zenodo-published MD5 before parsing.",
+  "retrievedOn": "2026-11-03",
+  "sourceByteCount": 10413,
+  "expectedMeasurementCount": 315,
+  "expectedNegativeHydrogenMeasurements": 5,
+  "expectedZeroStandardDeviationMeasurements": 3,
+  "expectedMaximumTimeHours": 120
 }
