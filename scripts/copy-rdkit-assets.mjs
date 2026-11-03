@@ -47,6 +47,7 @@ for (const source of [jsSource, wasmSource]) {
   files[name] = {
     bytes: bytes.length,
     sha256: createHash('sha256').update(bytes).digest('hex'),
+    integrity: 'sha256-' + createHash('sha256').update(bytes).digest('base64'),
   };
 }
 const assetManifest = {
