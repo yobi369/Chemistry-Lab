@@ -168,6 +168,21 @@ def profile_fit_multistart(model, fixed_key, fixed_rate, warm, baseline):
     ]
     return min(candidates, key=lambda item: item["objective"])
 
+def baseline_fit_multistart(model):
+    # The unconstrained starting fit can itself be trapped in a local basin.
+    # Search the same bounded log-rate space independently before using it as
+    # the likelihood-ratio denominator.
+    _, initial = parameter_layout(model)
+    seeds = [initial]
+    signs = np.where(np.arange(len(initial)) % 2 == 0, 1.0, -1.0)
+    for factor in (0.1, 10.0, 0.03, 3.0, 0.3):
+        for direction in (1.0, -1.0):
+            seeds.append(np.clip(
+                initial + direction * math.log(factor) * signs, LOWER, UPPER
+            ))
+    candidates = [profile_fit(model, start=seed) for seed in seeds]
+    return min(candidates, key=lambda item: item["objective"])
+
 
 def likelihood_statistic(objective, minimum, n):
     if objective <= 0 or minimum <= 0:
@@ -247,7 +262,7 @@ for ts_result in ts_report["results"]:
     parameter = ts_result["parameter"]
     group, parameter_name = parameter.split(".")
     fixed_key = (group, "k1" if parameter_name == "k1PerHour" else "k2")
-    baseline = profile_fit(model)
+    baseline = baseline_fit_multistart(model)
     ts_points = ts_result["points"]
     scipy_points = []
     warm_start = baseline["theta"]
