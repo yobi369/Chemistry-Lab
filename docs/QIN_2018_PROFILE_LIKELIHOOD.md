@@ -19,7 +19,7 @@ The benchmark evaluates Model 4L Beijing/Hepure phase-2 rates and the correspond
 
 ## Corrected 31-condition profile results
 
-The refined 81-point grid plus 24-step log-space endpoint refinement on the 31-condition / 279-observation set produced the following results. The full report is archived as `qin-model4-profile-likelihood` in workflow run `41624945167` (commit `d51439c1da5e16363f294743782705a34261651f`):
+The refined 81-point grid plus 24-step log-space endpoint refinement on the 31-condition / 279-observation set produced the following results. The full report is archived as `qin-model4-profile-likelihood` in workflow run `41635161445` (commit `2de0a48fedff04a94c59c275b98282abf4bb5495`). All 81 grid points converged for each profile; the 4L Hepure and 4G Beijing profiles include 82 converged points because the unconstrained estimate was inserted in addition to the grid:
 
 | Model / parameter | Primary accepted region (h^-1) | Additional accepted region |
 |---|---:|---:|
@@ -28,7 +28,7 @@ The refined 81-point grid plus 24-step log-space endpoint refinement on the 31-c
 | 4G Beijing k2 | 1e-8–0.0165171 | None detected |
 | 4G Hepure k2 | 1e-8–0.00567538 | None detected |
 
-All four lower endpoints reach the optimizer's 1e-8 h^-1 lower bound. The additional 4L regions are disconnected from the primary accepted regions and reach the 10 h^-1 upper bound. These are boundary-limited profile regions, not conventional finite two-sided confidence intervals. No profile point failed to converge in this run.
+The 4L Beijing, 4L Hepure and 4G Hepure primary components reach the 1e-8 h^-1 lower bound; the 4G Beijing primary component is the higher-rate region containing its unconstrained estimate, while a second low-rate component reaches the lower bound. Every additional component listed reaches the 10 h^-1 upper bound. These are boundary-limited profile regions, not conventional finite two-sided confidence intervals. The baseline/profile minimum SSEs were 329.18030199 / 329.18030167 for 4L and 409.86386392 / 409.86386391 for 4G; the differences are negligible and the independent SciPy check passed. No profile point failed to converge.
 
 ## Likelihood-ratio convention
 
