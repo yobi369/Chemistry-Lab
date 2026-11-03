@@ -167,6 +167,17 @@ export function fitQinModel4(
   });
   if (initial.some(v => !finite(v) || v < Math.log(1e-8) || v > Math.log(10)))
     throw new QinModel4FitError('Initial rates must be finite and between 1e-8 and 10 h^-1.');
+  const fixedRateIndices = new Map<number, number>();
+  for (const [name, value] of Object.entries(options.fixedRateConstantsPerHour ?? {})) {
+    const index = rateKeys.findIndex(key => (key === 'GLOBAL:k1' ? 'GLOBAL.k1PerHour' :
+      key.replace(':', '.').replace('k1', 'k1PerHour').replace('k2', 'k2PerHour')) === name);
+    if (index < 0) throw new QinModel4FitError('Unknown fixed rate parameter: ' + name);
+    if (!finite(value) || value < 1e-8 || value > 10)
+      throw new QinModel4FitError('Fixed rates must be finite and between 1e-8 and 10 h^-1.');
+    fixedRateIndices.set(index, value);
+    initial[index] = Math.log(value);
+  }
+  const freeIndices = initial.map((_, index) => index).filter(index => !fixedRateIndices.has(index));
 
   const ratesFor = (theta: readonly number[], type: QinIronType) => {
     const k1 = variant === '4L'
