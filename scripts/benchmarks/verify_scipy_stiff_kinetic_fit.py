@@ -31,7 +31,7 @@ def main():
         solution = solve_ivp(
             lambda time, state: rhs(time, state, *theta),
             (0.0, float(times[-1])),
-            fixture["initial_concentrations"].values(),
+            list(fixture["initial_concentrations"].values()),
             method="BDF",
             t_eval=times,
             rtol=1e-10,
