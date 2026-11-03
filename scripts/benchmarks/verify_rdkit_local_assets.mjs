@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const directory = path.join(root, 'public', 'vendor', 'rdkit');
+const directory = path.join(root, 'public', 'vendor', 'rdkit', '2026.9.1');
 const manifest = JSON.parse(await readFile(path.join(directory, 'manifest.json'), 'utf8'));
 assert.equal(manifest.toolkit, 'RDKit.js');
 assert.equal(manifest.version, '2026.9.1');
