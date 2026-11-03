@@ -77,23 +77,34 @@ def solve_model(variant):
     def evaluate(theta, keep=False):
         residuals = []
         amplitudes = {}
+        fitted = []
         for s in fit_series:
             k1, k2 = decode(theta, s["iron"])
             t = np.array([p[0] for p in s["observations"]], dtype=float)
             y = np.array([p[1] for p in s["observations"]], dtype=float)
             design = np.column_stack((-np.expm1(-k1 * t), -np.expm1(-k2 * t)))
             amp, _ = nnls(design, y)
-            residuals.extend(y - design @ amp)
+            predicted = design @ amp
+            residual = y - predicted
+            residuals.extend(residual)
             amplitudes[s["id"]] = {"A": float(amp[0]), "B": float(amp[1])}
+            if keep:
+                for i in range(len(t)):
+                    fitted.append({
+                        "experimentId": s["id"], "label": s["label"], "ironType": s["iron"],
+                        "timeHours": float(t[i]), "observedMicromoles": float(y[i]),
+                        "predictedMicromoles": float(predicted[i]),
+                        "residualMicromoles": float(residual[i]),
+                    })
         if keep:
-            return np.asarray(residuals), amplitudes
+            return np.asarray(residuals), amplitudes, fitted
         return np.asarray(residuals)
 
     result = least_squares(
         evaluate, x0, bounds=(lower, upper), method="trf",
         x_scale="jac", max_nfev=20000, ftol=1e-12, xtol=1e-12, gtol=1e-12,
     )
-    residuals, amplitudes = evaluate(result.x, keep=True)
+    residuals, amplitudes, fitted = evaluate(result.x, keep=True)
     dof = len(residuals) - (2 * len(fit_series) + (2 * len(types) if variant == "4L" else 1 + len(types)))
     rates = {}
     for iron in types:
@@ -104,11 +115,82 @@ def solve_model(variant):
         "parameterCount": len(result.x) + 2 * len(fit_series),
         "degreesOfFreedom": dof, "sumSquaredResiduals": float(np.dot(residuals, residuals)),
         "reducedResidualStatistic": float(np.dot(residuals, residuals) / dof),
-        "ratesByIronType": rates, "localAmplitudes": amplitudes,
+        "ratesByIronType": rates, "localAmplitudes": amplitudes, "fitted": fitted,
     }
 
 with open(ts_json_path, encoding="utf-8") as handle:
     ts = json.load(handle)["paperSeededFits"]
+
+def compare_complete_predictions(ts_rows, scipy_rows):
+    if len(ts_rows) != len(scipy_rows):
+        raise RuntimeError("TypeScript and SciPy fitted observation counts differ.")
+    by_iron = {}
+    by_experiment = {}
+    all_prediction_delta = []
+    all_residual_delta = []
+    row_comparisons = []
+    for index, (ts_row, scipy_row) in enumerate(zip(ts_rows, scipy_rows)):
+        for key in ("experimentId", "ironType"):
+            if ts_row[key] != scipy_row[key]:
+                raise RuntimeError(f"Fitted row {index} identity mismatch for {key}: {ts_row[key]} vs {scipy_row[key]}")
+        for key in ("timeHours", "observedMicromoles"):
+            if abs(ts_row[key] - scipy_row[key]) > 1e-12:
+                raise RuntimeError(f"Fitted row {index} source-data mismatch for {key}.")
+        iron = ts_row["ironType"]
+        experiment = ts_row["experimentId"]
+        prediction_delta = scipy_row["predictedMicromoles"] - ts_row["predictedMicromoles"]
+        residual_delta = scipy_row["residualMicromoles"] - ts_row["residualMicromoles"]
+        for collection, key in ((by_iron, iron), (by_experiment, experiment)):
+            group = collection.setdefault(key, {"predictionDelta": [], "residualDelta": [],
+                "typescriptResiduals": [], "scipyResiduals": []})
+            group["predictionDelta"].append(prediction_delta)
+            group["residualDelta"].append(residual_delta)
+            group["typescriptResiduals"].append(ts_row["residualMicromoles"])
+            group["scipyResiduals"].append(scipy_row["residualMicromoles"])
+        all_prediction_delta.append(prediction_delta)
+        all_residual_delta.append(residual_delta)
+        row_comparisons.append({
+            "experimentId": experiment, "label": ts_row["label"], "ironType": iron,
+            "timeHours": ts_row["timeHours"], "observedMicromoles": ts_row["observedMicromoles"],
+            "typescriptPredictedMicromoles": ts_row["predictedMicromoles"],
+            "scipyPredictedMicromoles": scipy_row["predictedMicromoles"],
+            "predictionDifferenceMicromoles": prediction_delta,
+            "typescriptResidualMicromoles": ts_row["residualMicromoles"],
+            "scipyResidualMicromoles": scipy_row["residualMicromoles"],
+            "residualDifferenceMicromoles": residual_delta,
+        })
+
+    def summarize(group):
+        pred = np.asarray(group["predictionDelta"], dtype=float)
+        resid = np.asarray(group["residualDelta"], dtype=float)
+        ts_resid = np.asarray(group["typescriptResiduals"], dtype=float)
+        scipy_resid = np.asarray(group["scipyResiduals"], dtype=float)
+        corr = float(np.corrcoef(ts_resid, scipy_resid)[0, 1]) if np.std(ts_resid) and np.std(scipy_resid) else None
+        ts_sse = float(np.dot(ts_resid, ts_resid))
+        scipy_sse = float(np.dot(scipy_resid, scipy_resid))
+        return {
+            "observationCount": int(len(pred)),
+            "predictionRmseMicromoles": float(np.sqrt(np.mean(pred ** 2))),
+            "predictionMaxAbsDifferenceMicromoles": float(np.max(np.abs(pred))),
+            "residualRmseMicromoles": float(np.sqrt(np.mean(resid ** 2))),
+            "residualMaxAbsDifferenceMicromoles": float(np.max(np.abs(resid))),
+            "residualPearsonCorrelation": corr,
+            "typescriptResidualSumSquares": ts_sse,
+            "scipyResidualSumSquares": scipy_sse,
+            "relativeSseDifference": abs(ts_sse - scipy_sse) / max(ts_sse, scipy_sse, 1e-12),
+        }
+    return {
+        "observationCount": len(ts_rows),
+        "overall": summarize({
+            "predictionDelta": all_prediction_delta, "residualDelta": all_residual_delta,
+            "typescriptResiduals": [r["residualMicromoles"] for r in ts_rows],
+            "scipyResiduals": [r["residualMicromoles"] for r in scipy_rows],
+        }),
+        "byIronType": {iron: summarize(group) for iron, group in by_iron.items()},
+        "byExperiment": {experiment: summarize(group) for experiment, group in by_experiment.items()},
+        "rowComparisons": row_comparisons,
+    }
+
 results = {}
 for variant, ts_key, target in [
     ("4L", "model4L_unweighted", 1.6),
@@ -135,8 +217,23 @@ for variant, ts_key, target in [
             raise RuntimeError(f"{variant} Alfa blank {parameter}: SciPy and TypeScript differ ({a} vs {b}).")
     if abs(scipy_fit["reducedResidualStatistic"] - target) > (0.15 if variant == "4L" else 0.2):
         raise RuntimeError(variant + " does not reproduce the paper's published statistic.")
+    prediction_comparison = compare_complete_predictions(ts_fit["fitted"], scipy_fit["fitted"])
+    thresholds = {
+        "4L": {"predictionRmseMicromoles": 1e-4, "predictionMaxAbsDifferenceMicromoles": 1e-3},
+        "4G": {"predictionRmseMicromoles": 5e-6, "predictionMaxAbsDifferenceMicromoles": 2e-5},
+    }[variant]
+    comparison = prediction_comparison["overall"]
+    if comparison["predictionRmseMicromoles"] > thresholds["predictionRmseMicromoles"] or \
+       comparison["predictionMaxAbsDifferenceMicromoles"] > thresholds["predictionMaxAbsDifferenceMicromoles"] or \
+       comparison["residualPearsonCorrelation"] is None or comparison["residualPearsonCorrelation"] < 0.99999 or \
+       comparison["relativeSseDifference"] > 1e-7:
+        raise RuntimeError(variant + " complete prediction/residual comparison exceeded documented numerical tolerances.")
+    prediction_comparison["acceptanceThresholds"] = thresholds
+    prediction_comparison["relativeSseDifferenceMaximum"] = 1e-7
+    prediction_comparison["minimumResidualCorrelation"] = 0.99999
     results[variant] = {
-        "scipy": {k: v for k, v in scipy_fit.items() if k != "localAmplitudes"},
+        "completePredictionResidualComparison": prediction_comparison,
+        "scipy": {k: v for k, v in scipy_fit.items() if k not in ("localAmplitudes", "fitted")},
         "typescriptReducedStatistic": ts_fit["reducedChiSquare"],
         "publishedReducedStatistic": target,
     }

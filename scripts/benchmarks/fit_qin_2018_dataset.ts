@@ -43,7 +43,7 @@ const initialRates4G = {
   Toda: { k1PerHour: 0.4719, k2PerHour: 0.0170 },
   'CMC-nZVI': { k1PerHour: 0.4719, k2PerHour: 0.0114 },
 };
-function summarize(fit: ReturnType<typeof fitQinModel4>) {
+function summarize(fit: ReturnType<typeof fitQinModel4>, includeFitted = false) {
   return {
     converged: fit.converged, iterations: fit.iterations,
     parameterCount: fit.parameterCount, degreesOfFreedom: fit.degreesOfFreedom,
@@ -52,6 +52,7 @@ function summarize(fit: ReturnType<typeof fitQinModel4>) {
     reducedChiSquare: fit.reducedChiSquare,
     ratesByIronType: fit.rateConstantsPerHour,
     localAmplitudes: fit.localAmplitudesMicromoles,
+    ...(includeFitted ? { fitted: fit.fitted } : {}),
     alfaBlank: fit.localAmplitudesMicromoles['35'],
     identifiable: fit.locallyIdentifiable,
     conditionNumber: fit.informationConditionNumber,
@@ -104,8 +105,8 @@ console.log(JSON.stringify({
   paperSeededFits: {
     model4L_SD_weighted: summarize(fit4LWeighted),
     model4G_SD_weighted: summarize(fit4GWeighted),
-    model4L_unweighted: summarize(fit4LUnweighted),
-    model4G_unweighted: summarize(fit4GUnweighted),
+    model4L_unweighted: summarize(fit4LUnweighted, true),
+    model4G_unweighted: summarize(fit4GUnweighted, true),
   },
   publishedTargets: {
     model4L: { reducedChiSquare: 1.6, degreesOfFreedom: 207, alfaBlank: { A: 2.2245, k1PerHour: 0.4113, B: 20.5425, k2PerHour: 0.0076 } },
