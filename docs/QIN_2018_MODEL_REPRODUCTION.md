@@ -66,7 +66,7 @@ An independent SciPy 1.17 implementation using bounded nonlinear least squares a
 
 ## Next validation gates
 
-1. Vendor the checksum-verified CSV so reproducible validation does not depend on Zenodo availability; CI currently downloads it and verifies the published MD5 before every real-data fit.
+1. Keep the vendored CSV byte-for-byte unchanged and retain its checksum/provenance verification in CI.
 2. Independently confirm the inferred model-specific observation sets against author fitting files if they can be obtained; the current selections are supported by the exact published degrees of freedom and coefficient/statistic reproduction.
 3. Improve multi-start and identifiability handling for weakly constrained Beijing/Hepure phase-2 parameters, preserving non-unique minima and wide uncertainty.
 4. Validate local covariance against the paper's tabulated standard errors and add profile-likelihood/bootstrap intervals for weakly identified parameters.
