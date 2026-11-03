@@ -108,7 +108,7 @@ console.log(JSON.stringify({
   interpretation: [
     'The degrees-of-freedom equation alone cannot distinguish 31 series × 9 observations from 35 series × 287 observations because the local-parameter count changes with the number of series.',
     'The published Model 4 Tables S5 and S6 list 31 local experimental conditions, not 35. Their condition list excludes CMC-nZVI dithionite/thiosulfite series #64, #65, #68 and #69.',
-    'The candidate that matches all five published blank-condition parameter sets and both rounded reduced chi-square targets is the strongest reproduction evidence.',
-    'The paper and SI do not state the exact row-level observation inclusion rule; even a full coefficient match does not substitute for the original fitting project or author confirmation.',
+    'The 31-condition candidate is supported by the published Table S5/S6 row count, fitted-parameter count, degrees of freedom and rounded reduced chi-square values. Beijing/Hepure blank coefficients remain sensitive to non-unique phase-2 minima and do not reproduce exactly from the current optimizer starts.',
+    'The paper and SI do not explicitly state the row-level timepoint inclusion rule or publish the original fitting project; direct author confirmation is still required for definitive provenance.',
   ],
 }, null, 2));
