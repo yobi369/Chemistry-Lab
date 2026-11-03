@@ -22,6 +22,8 @@ export interface QinModel4Options {
   readonly initialRatiosByIronType?: Readonly<Partial<Record<QinIronType, number>>>;
   readonly maxIterations?: number;
   readonly tolerance?: number;
+  /** Set false for bootstrap refits that only need parameter estimates, not local covariance. */
+  readonly calculateUncertainty?: boolean;
 }
 export interface QinModel4Fit {
   readonly model: QinModel4Variant;
@@ -275,15 +277,16 @@ export function fitQinModel4(
   const covarianceScale = degreesOfFreedom > 0
     ? (options.weighting === 'standard-deviation' ? 1 : current.cost / degreesOfFreedom)
     : 1;
-  const statistics = degreesOfFreedom > 0
-    ? calculateLocalFitStatistics(parameterNames, parameterValues, residualAt, covarianceScale)
-    : null;
+  const statistics = options.calculateUncertainty === false || degreesOfFreedom <= 0
+    ? null
+    : calculateLocalFitStatistics(parameterNames, parameterValues, residualAt, covarianceScale);
   const warnings: string[] = [];
   if (!converged) warnings.push('Optimizer stopped without satisfying the convergence criterion; inspect initial rates and identifiability.');
   const boundaryRates = rateKeys.filter((_, i) => theta[i] <= Math.log(1e-8) + 1e-6 || theta[i] >= Math.log(10) - 1e-6);
   if (boundaryRates.length) warnings.push('Rate estimates reached optimizer bounds: ' + boundaryRates.join(', ') + '; treat these as boundary-limited, not precise point estimates.');
   if (degreesOfFreedom <= 0) warnings.push('Non-positive residual degrees of freedom; uncertainty statistics are not defined.');
   if (statistics) warnings.push(...statistics.warnings);
+  if (options.calculateUncertainty === false) warnings.push('Local covariance diagnostics were skipped by caller; this fit was used for bootstrap parameter estimation only.');
   if (excludedZeroStandardDeviationCount) warnings.push(excludedZeroStandardDeviationCount + ' zero-SD observations were excluded from the weighted objective by explicit policy.');
   if (variant === '4G') warnings.push('4G constrains k1 to one shared value across the full dataset; k2 remains grouped by iron type.');
   return {
