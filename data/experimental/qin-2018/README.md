@@ -24,3 +24,18 @@ The preferred paper model represents two independently decaying reactive phases.
 Qin, H., Guan, X., Bandstra, J. Z., Johnson, R. L., & Tratnyek, P. G. (2018). Modeling the Kinetics of Hydrogen Formation by Zerovalent Iron: Effects of Sulfidation on Micro- and Nano-Scale Particles. Environmental Science & Technology, 52(23), 13887–13896. https://doi.org/10.1021/acs.est.8b04436
 
 Tratnyek, P. G., Qin, H., & Guan, X. (2018). Raw data from Qin et al. (2018). Zenodo. https://doi.org/10.5281/zenodo.1979080
+
+## Re-fetch and verify the source file
+
+The raw CSV is currently fetched from the versioned Zenodo record in CI rather than silently copied from a secondary source. The manifest pins the filename, DOI, units, CC BY 4.0 licence and Zenodo-published MD5 checksum.
+
+```bash
+mkdir -p data/experimental/qin-2018
+curl --fail --location \
+  "https://zenodo.org/records/1979080/files/QinTratnyek18-H2vsTime-Data.csv?download=1" \
+  --output data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv
+md5sum data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv
+bun run scripts/benchmarks/verify_qin_2018_dataset.ts data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv
+```
+
+The CI job downloads the same file, checks the published checksum, parses the full dataset through the production importer and asserts the series count and 120-hour horizon. The raw file is not yet committed to Git; the pinned source record is the current data source of truth.
