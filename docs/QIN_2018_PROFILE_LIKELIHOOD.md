@@ -12,21 +12,21 @@ After installing the locked dependencies:
 
 ```bash
 bun run scripts/benchmarks/profile_qin_2018_model4.ts \
-  data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv 41
+  data/experimental/qin-2018/QinTratnyek18-H2vsTime-Data.csv 81
 ```
 
 The benchmark evaluates Model 4L Beijing/Hepure phase-2 rates and the corresponding Model 4G grouped rates. It includes the unconstrained estimate explicitly in the log-spaced grid and reports each profile point's objective, convergence, iterations and warnings. The report identifies connected components of converged grid points that satisfy the likelihood-ratio threshold. It reports the component containing the best profile-grid point as the primary interval and preserves any additional disconnected accepted components separately. The denominator is the smaller of the baseline objective and the converged profile-grid objectives; if a conditional profile point improves the baseline, the report flags this as evidence that the unconstrained baseline fit needs refinement. The profile benchmark brackets each finite endpoint on the log-spaced grid and applies 12 log-space bisection steps. Endpoints remain approximate because the bracket grid can miss additional narrow components and the likelihood-ratio calibration itself is asymptotic.
 
 ## Corrected 31-condition profile results
 
-The 41-point grid plus 12-step log-space endpoint refinement on the 31-condition / 279-observation set produced:
+The refined 81-point grid plus 24-step log-space endpoint refinement on the 31-condition / 279-observation set produced the following results. The full report is archived as `qin-model4-profile-likelihood` in workflow run `41621518844` (commit `09e5075b0faf176c1ad8db99993841be47e6bac1`):
 
 | Model / parameter | Primary accepted region (h^-1) | Additional accepted region |
 |---|---:|---:|
-| 4L Beijing k2 | 1e-8–0.01024 | 0.12456–10 |
-| 4L Hepure k2 | 1e-8–0.00407 | 0.40067–10 |
-| 4G Beijing k2 | 1e-8–0.01652 | None detected |
-| 4G Hepure k2 | 1e-8–0.00568 | None detected |
+| 4L Beijing k2 | 1e-8–0.0102417 | 0.124568–10 |
+| 4L Hepure k2 | 1e-8–0.00406782 | 0.400673–10 |
+| 4G Beijing k2 | 1e-8–0.0165171 | None detected |
+| 4G Hepure k2 | 1e-8–0.00567538 | None detected |
 
 All four lower endpoints reach the optimizer's 1e-8 h^-1 lower bound. The additional 4L regions are disconnected from the primary accepted regions and reach the 10 h^-1 upper bound. These are boundary-limited profile regions, not conventional finite two-sided confidence intervals. No profile point failed to converge in this run.
 
