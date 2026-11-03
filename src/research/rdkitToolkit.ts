@@ -36,63 +36,54 @@ export interface RDKitMolecularIdentity {
   structureJson: unknown;
 }
 
-declare global {
-  interface Window {
-    initRDKitModule?: (options?: { locateFile?: (file: string) => string }) => Promise<RDKitModule>;
-    __chemistryLabRDKitPromise?: Promise<RDKitModule>;
-  }
+interface RDKitWorkerResponse {
+  readonly id: number;
+  readonly result?: RDKitMolecularIdentity;
+  readonly error?: string;
 }
 
-async function loadScript(src: string): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = src;
-    script.async = true;
-    script.crossOrigin = 'anonymous';
-    script.dataset.chemistryLabRdkit = 'true';
-    script.onload = () => resolve();
-    script.onerror = () => {
-      script.remove();
-      reject(new Error(`Could not load RDKit.js script from ${src}.`));
-    };
-    document.head.appendChild(script);
-  });
+interface PendingRDKitRequest {
+  readonly resolve: (value: RDKitMolecularIdentity) => void;
+  readonly reject: (reason: Error) => void;
 }
 
-/** Load the pinned official RDKit.js WASM runtime once per page, preferring same-origin assets. */
-export async function loadRDKitToolkit(): Promise<RDKitModule> {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    throw new Error('RDKit.js is a browser WebAssembly toolkit and requires a browser environment.');
-  }
-  if (window.__chemistryLabRDKitPromise) return window.__chemistryLabRDKitPromise;
-  window.__chemistryLabRDKitPromise = (async () => {
-    const localBase = new URL(RDKIT_LOCAL_BASE, window.location.origin).toString();
-    const candidates = [
-      { label: 'same-origin packaged assets', base: localBase, script: new URL('RDKit_minimal.js', localBase).toString() },
-      { label: 'pinned jsDelivr fallback', base: RDKIT_CDN_BASE, script: `${RDKIT_CDN_BASE}RDKit_minimal.js` },
-    ];
-    const failures: string[] = [];
-    for (const candidate of candidates) {
-      try {
-        if (!window.initRDKitModule) await loadScript(candidate.script);
-        if (!window.initRDKitModule) throw new Error('RDKit.js script loaded without exposing its WebAssembly initializer.');
-        const module = await window.initRDKitModule({
-          locateFile: file => new URL(file, candidate.base).toString(),
-        });
-        if (String(module.version()).split('.').map(part => String(Number(part))).join('.') !== RDKIT_VERSION) {
-          throw new Error(`Expected RDKit ${RDKIT_VERSION}, received ${module.version()}.`);
-        }
-        return module;
-      } catch (error) {
-        failures.push(`${candidate.label}: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-    throw new Error(`Unable to initialize the pinned RDKit.js runtime. ${failures.join(' | ')}`);
-  })().catch(error => {
-    window.__chemistryLabRDKitPromise = undefined;
-    throw error;
-  });
-  return window.__chemistryLabRDKitPromise;
+let rdkitWorker: Worker | undefined;
+let nextWorkerRequestId = 0;
+const pendingWorkerRequests = new Map<number, PendingRDKitRequest>();
+
+function rejectPendingWorkerRequests(error: Error): void {
+  for (const request of pendingWorkerRequests.values()) request.reject(error);
+  pendingWorkerRequests.clear();
+}
+
+/** RDKit.js uses dynamic Embind wrappers; isolate its required unsafe-eval permission in a dedicated worker. */
+function getRDKitWorker(): Worker {
+  if (typeof Worker === 'undefined') throw new Error('This browser does not support Web Workers required for isolated RDKit execution.');
+  if (rdkitWorker) return rdkitWorker;
+  const worker = new Worker('/rdkit-worker.js', { name: 'chemistry-lab-rdkit' });
+  worker.onmessage = (event: MessageEvent<RDKitWorkerResponse>) => {
+    const request = pendingWorkerRequests.get(event.data.id);
+    if (!request) return;
+    pendingWorkerRequests.delete(event.data.id);
+    if (event.data.error) request.reject(new Error(event.data.error));
+    else if (event.data.result) request.resolve(event.data.result);
+    else request.reject(new Error('RDKit worker returned an empty analysis response.'));
+  };
+  worker.onerror = event => {
+    event.preventDefault();
+    const error = new Error(event.message || 'The isolated RDKit worker failed to execute.');
+    rejectPendingWorkerRequests(error);
+    worker.terminate();
+    if (rdkitWorker === worker) rdkitWorker = undefined;
+  };
+  worker.onmessageerror = () => {
+    const error = new Error('The isolated RDKit worker returned an unreadable message.');
+    rejectPendingWorkerRequests(error);
+    worker.terminate();
+    if (rdkitWorker === worker) rdkitWorker = undefined;
+  };
+  rdkitWorker = worker;
+  return worker;
 }
 
 /**
@@ -141,6 +132,20 @@ export function analyzeSmilesWithRDKit(smiles: string, rdkit: RDKitModule): RDKi
 }
 
 export async function analyzeSmiles(smiles: string): Promise<RDKitMolecularIdentity> {
-  const rdkit = await loadRDKitToolkit();
-  return analyzeSmilesWithRDKit(smiles, rdkit);
+  if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+    throw new Error('RDKit.js analysis requires a browser with Web Worker support.');
+  }
+  if (typeof smiles !== 'string' || !smiles.trim() || smiles.length > 10_000) {
+    throw new Error('Provide a non-empty SMILES string of at most 10,000 characters.');
+  }
+  const id = ++nextWorkerRequestId;
+  return new Promise((resolve, reject) => {
+    pendingWorkerRequests.set(id, { resolve, reject });
+    try {
+      getRDKitWorker().postMessage({ id, smiles: smiles.trim() });
+    } catch (error) {
+      pendingWorkerRequests.delete(id);
+      reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  });
 }
