@@ -148,7 +148,7 @@ function profile(model: QinModel4Variant, parameter: string) {
     profileGridBestRatePerHour: bestPoint.ratePerHour,
     baselineObjective: baseline.sumSquaredResiduals,
     profileMinimumObjective,
-    profileGridImprovedBaseline: profileMinimumObjective < baseline.sumSquaredResiduals,
+    profileGridImprovedBaseline: profileMinimumObjective < baseline.sumSquaredResiduals - 1e-8 * (1 + baseline.sumSquaredResiduals),
     likelihoodRatioCutoff95: cutoff, observationCount: n,
     interval95GridApproximation: bestComponent ? intervalFor(bestComponent) : null,
     additionalAcceptedComponents: components.filter(c => c !== bestComponent).map(intervalFor),
