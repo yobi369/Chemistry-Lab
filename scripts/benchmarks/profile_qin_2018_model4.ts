@@ -66,10 +66,13 @@ function profile(model: QinModel4Variant, parameter: string) {
   const n = baseline.includedObservationCount;
   const cutoff = 3.841458820694124;
   const rates = startsFromFit(baseline);
-  const points = Array.from({ length: gridPoints }, (_, i) => {
-    const logRate = Math.log(1e-8) + i * (Math.log(10) - Math.log(1e-8)) / (gridPoints - 1);
-    return Math.exp(logRate);
-  });
+  const points = [...new Set([
+    ...Array.from({ length: gridPoints }, (_, i) => {
+      const logRate = Math.log(1e-8) + i * (Math.log(10) - Math.log(1e-8)) / (gridPoints - 1);
+      return Math.exp(logRate);
+    }),
+    estimate,
+  ])].sort((a, b) => a - b);
   const evaluations = points.map(rate => {
     const fit = fitQinModel4(model, series, {
       ...options(model, rates),
@@ -83,7 +86,7 @@ function profile(model: QinModel4Variant, parameter: string) {
     ...p,
     likelihoodRatioStatistic: minObjective > 0 && p.objective > 0 ? n * Math.log(p.objective / minObjective) : null,
   }));
-  const accepted = withLikelihood.filter(p => p.likelihoodRatioStatistic !== null &&
+  const accepted = withLikelihood.filter(p => p.converged && p.likelihoodRatioStatistic !== null &&
     p.likelihoodRatioStatistic! <= cutoff);
   const lower = accepted.length ? accepted[0].ratePerHour : null;
   const upper = accepted.length ? accepted[accepted.length - 1].ratePerHour : null;
@@ -95,6 +98,7 @@ function profile(model: QinModel4Variant, parameter: string) {
     model, parameter, estimatePerHour: estimate, baselineObjective: minObjective,
     likelihoodRatioCutoff95: cutoff, observationCount: n,
     interval95GridApproximation: { lowerPerHour: lower, upperPerHour: upper, boundaryLimited },
+    baselinePointIncluded: points.includes(estimate),
     convergedProfilePoints: withLikelihood.filter(p => p.converged).length,
     failedProfilePoints: withLikelihood.filter(p => !p.converged).length,
     points: withLikelihood,
