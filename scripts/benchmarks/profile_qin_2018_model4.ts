@@ -3,8 +3,8 @@ import { importQinTratnyek2018Csv } from '../../src/research/experimentalCsv';
 import { fitQinModel4, inferQinIronType, QinExperimentSeries, QinModel4Variant } from '../../src/research/qinHydrogenModel';
 
 const csvPath = process.argv[2];
-if (!csvPath) throw new Error('Usage: bun run scripts/benchmarks/profile_qin_2018_model4.ts <csv-path> [grid-points=41]');
-const gridPoints = Number(process.argv[3] ?? 41);
+if (!csvPath) throw new Error('Usage: bun run scripts/benchmarks/profile_qin_2018_model4.ts <csv-path> [grid-points=81]');
+const gridPoints = Number(process.argv[3] ?? 81);
 if (!Number.isSafeInteger(gridPoints) || gridPoints < 21 || gridPoints > 101 || gridPoints % 2 === 0)
   throw new Error('Grid points must be an odd integer from 21 to 101.');
 
@@ -110,7 +110,7 @@ function profile(model: QinModel4Variant, parameter: string) {
   const refineCrossing = (outside: typeof withLikelihood[number], inside: typeof withLikelihood[number], side: 'lower' | 'upper') => {
     let lo = Math.log(Math.min(outside.ratePerHour, inside.ratePerHour));
     let hi = Math.log(Math.max(outside.ratePerHour, inside.ratePerHour));
-    for (let iteration = 0; iteration < 12; iteration++) {
+    for (let iteration = 0; iteration < 24; iteration++) {
       const mid = (lo + hi) / 2;
       const point = evaluateAt(Math.exp(mid));
       const statistic = point.converged && point.objective > 0
@@ -138,7 +138,7 @@ function profile(model: QinModel4Variant, parameter: string) {
       lowerPerHour: lowerRefined, upperPerHour: upperRefined,
       gridBracket: { lowerPerHour: first.ratePerHour, upperPerHour: last.ratePerHour },
       boundaryLimited: { lower: lowerBoundaryLimited, upper: upperBoundaryLimited },
-      rootRefinementIterations: 12,
+      rootRefinementIterations: 24,
     };
   };
   const bestComponent = components.find(c => c.some(p => p.ratePerHour === bestPoint.ratePerHour));
