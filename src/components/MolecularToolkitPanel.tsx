@@ -18,7 +18,7 @@ export const MolecularToolkitPanel: React.FC = () => {
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h4 className="text-sm font-semibold">RDKit molecular identity & stereochemistry</h4>
-        <p className="mt-1 max-w-3xl text-[11px] leading-5 text-zinc-500">Official RDKit.js WebAssembly toolkit. Parsing and sanitization are performed by RDKit; canonical isomeric SMILES, InChI and InChIKey are generated locally in this browser.</p>
+        <p className="mt-1 max-w-3xl text-[11px] leading-5 text-zinc-500">Official RDKit.js WebAssembly toolkit. Parsing and sanitization are performed by RDKit in an isolated same-origin Web Worker; canonical isomeric SMILES, InChI and InChIKey are generated locally in this browser.</p>
       </div>
       <span className="rounded-full border border-emerald-800 px-2 py-1 font-mono text-[10px] text-emerald-300">RDKit { '2026.9.1' }</span>
     </div>
@@ -37,7 +37,7 @@ export const MolecularToolkitPanel: React.FC = () => {
         <div><p className="text-zinc-500">Toolkit</p><p className="mt-1 font-mono text-zinc-200">{result.toolkitVersion}</p></div>
       </div>
       <details><summary className="cursor-pointer text-zinc-400">RDKit descriptors & stereochemical structure JSON</summary><pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-zinc-900 p-2 text-[10px] text-zinc-300">{JSON.stringify({descriptors:result.descriptors,structure:result.structureJson},null,2)}</pre></details>
-      <p className="text-[10px] text-zinc-500">RDKit molecule memory is released after analysis. Structure processing is local; the pinned runtime and WASM binary are fetched from jsDelivr on first use.</p>
+      <p className="text-[10px] text-zinc-500">RDKit molecule memory is released after analysis. Structure processing is local; the pinned JavaScript and WASM runtime is served from same-origin assets, with a pinned CDN fallback if the local assets are unavailable.</p>
     </div>}
   </article>;
 };

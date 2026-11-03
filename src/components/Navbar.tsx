@@ -465,6 +465,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         <button
+          id="tab-research"
+          onClick={() => setActiveTab('research')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
+            activeTab === 'research'
+              ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
+          }`}
+        >
+          <Activity className="w-3.5 h-3.5" />
+          <span>Research Lab · SSA</span>
+        </button>
+
+        <button
           id="tab-syscalls"
           onClick={() => setActiveTab('syscalls')}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${

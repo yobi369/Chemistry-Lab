@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { analyzeSmilesWithRDKit, RDKIT_VERSION, type RDKitModule, type RDKitMolecule } from './rdkitToolkit';
+import { analyzeSmilesWithRDKit, RDKIT_VERSION, RDKIT_LOCAL_BASE, RDKIT_CDN_BASE, type RDKitModule, type RDKitMolecule } from './rdkitToolkit';
 
 function fakeToolkit(overrides: Partial<RDKitMolecule> = {}, hasInchi = true) {
   let deleted = false;
@@ -23,6 +23,11 @@ function fakeToolkit(overrides: Partial<RDKitMolecule> = {}, hasInchi = true) {
 }
 
 test('RDKit molecular identity adapter', async t => {
+  await t.test('prefers same-origin versioned assets and retains an exact pinned CDN fallback', () => {
+    assert.equal(RDKIT_VERSION,'2026.9.1');
+    assert.equal(RDKIT_LOCAL_BASE,'/vendor/rdkit/2026.9.1/');
+    assert.equal(RDKIT_CDN_BASE,'https://cdn.jsdelivr.net/npm/@rdkit/rdkit@2026.9.1/dist/');
+  });
   await t.test('returns canonical isomeric SMILES, InChI, InChIKey and structural metadata', () => {
     const fake=fakeToolkit();
     const result=analyzeSmilesWithRDKit('C[C@H](O)C(=O)O',fake.rdkit);
