@@ -19,15 +19,16 @@ for (const m of dataset.measurements) {
   });
 }
 const allSeries = [...grouped.values()] as QinExperimentSeries[];
-// Candidate reconstruction of the paper's fit set: 35 series, all t>0 records,
-// plus the seven CMC-nZVI t=0 records. This is inferred from the published df
-// counts (287 observations for 4L/4G), and is explicitly labelled as a hypothesis.
-const candidateSeries = allSeries.map(s => ({
-  ...s,
-  observations: s.observations.filter(o => o.timeHours > 0 || s.ironType === 'CMC-nZVI'),
-}));
+// Tables S5 and S6 list 31 local Model 4 conditions. The four CMC-nZVI
+// dithionite/thiosulfite series (#64, #65, #68, #69) appear in the raw CSV
+// but not in those published Model 4 coefficient tables. Retain all nine
+// time points for each of the 31 listed conditions (279 observations).
+const excludedModel4Ids = new Set(['64', '65', '68', '69']);
+const candidateSeries = allSeries.filter(s => !excludedModel4Ids.has(s.experimentId));
 const candidateCount = candidateSeries.reduce((n, s) => n + s.observations.length, 0);
-if (candidateCount !== 287) throw new Error('Candidate selection expected 287 points from published df arithmetic; got ' + candidateCount);
+if (candidateSeries.length !== 31 || candidateCount !== 279)
+  throw new Error('Published Model 4 table selection expected 31 series / 279 points; got ' +
+    candidateSeries.length + ' series / ' + candidateCount + ' points.');
 const initialRatesByIronType = {
   Alfa: { k1PerHour: 0.4113, k2PerHour: 0.0076 },
   Beijing: { k1PerHour: 0.1338, k2PerHour: 0.0008 },
@@ -75,7 +76,8 @@ const fit4GUnweighted = fitQinModel4('4G', candidateSeries, {
   initialRatesByIronType: initialRates4G, initialSharedK1PerHour: 0.4719,
 });
 
-if (fit4LUnweighted.degreesOfFreedom !== 207 || fit4GUnweighted.degreesOfFreedom !== 211)
+if (fit4LUnweighted.parameterCount !== 72 || fit4GUnweighted.parameterCount !== 68 ||
+    fit4LUnweighted.degreesOfFreedom !== 207 || fit4GUnweighted.degreesOfFreedom !== 211)
   throw new Error('Qin Model 4 degrees-of-freedom reproduction failed.');
 if (Math.abs((fit4LUnweighted.reducedChiSquare ?? NaN) - 1.6) > 0.15)
   throw new Error('Qin Model 4L reduced residual statistic does not reproduce the published 1.6.');
@@ -93,8 +95,9 @@ if (Math.abs(a4g.A - 2.1025) > 0.05 || Math.abs(a4g.B - 19.8775) > 0.1 ||
   throw new Error('Qin Model 4G Alfa blank coefficients do not match Table S6.');
 console.log(JSON.stringify({
   source: '10.5281/zenodo.1979080',
-  selection: 'candidate-inferred: t>0 for 28 non-CMC series; all 9 points for 7 CMC-nZVI series',
-  selectionIsConfirmedByAuthors: false,
+  selection: '31 conditions listed in Model 4 Tables S5/S6; exclude raw series #64, #65, #68, #69; retain all nine time points per included series',
+  selectionSupportedByPublishedTables: true,
+  selectionIsExplicitlySpecifiedByAuthors: false,
   totalSeries: allSeries.length,
   totalRawMeasurements: dataset.audit.measurementCount,
   candidateFitPoints: candidateCount,
