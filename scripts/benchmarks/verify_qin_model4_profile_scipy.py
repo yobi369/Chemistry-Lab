@@ -233,9 +233,28 @@ for ts_result in ts_report["results"]:
     ts_points = ts_result["points"]
     scipy_points = []
     warm_start = baseline["theta"]
+
+    def multistart_profile_fit(rate, warm):
+        # Independent multi-start mirrors the profile analysis strategy without
+        # importing its TypeScript optimizer. Include continuation and baseline
+        # starts, then deterministic multiplicative perturbations in log space.
+        seeds = [np.asarray(warm, dtype=float), baseline["theta"]]
+        for factor in (0.1, 10.0, 0.03, 3.0, 0.3):
+            for direction in (1.0, -1.0):
+                seeds.append(np.clip(
+                    baseline["theta"] + direction * math.log(factor)
+                    * np.where(np.arange(len(baseline["theta"])) % 2 == 0, 1.0, -1.0),
+                    LOWER, UPPER,
+                ))
+        candidates = []
+        for seed in seeds:
+            candidate = profile_fit(model, fixed_key, rate, start=seed)
+            candidates.append(candidate)
+        return min(candidates, key=lambda item: item["objective"])
+
     for ts_point in ts_points:
         rate = float(ts_point["ratePerHour"])
-        fit = profile_fit(model, fixed_key, rate, start=warm_start)
+        fit = multistart_profile_fit(rate, warm_start)
         warm_start = fit["theta"]
         scipy_points.append({
             "ratePerHour": rate,
