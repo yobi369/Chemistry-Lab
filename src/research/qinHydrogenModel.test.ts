@@ -59,6 +59,30 @@ test('SD weighting exposes zero-SD exclusions and degrees of freedom', () => {
   }), /Zero SD/);
 });
 
+test('near-collinear rate columns retain the valid one-phase NNLS solution', () => {
+  const times = [1, 2, 4, 8, 16];
+  const series: QinExperimentSeries = {
+    experimentId: 'singular', label: 'singular (Alfa)', ironType: 'Alfa',
+    observations: times.map(timeHours => ({
+      timeHours,
+      hydrogenMicromoles: 3 * -Math.expm1(-1e-8 * timeHours),
+      standardDeviationMicromoles: 0.1,
+    })),
+  };
+  const fit = fitQinModel4('4L', [series], {
+    weighting: 'unweighted',
+    zeroStandardDeviation: 'unweighted',
+    fixedRateConstantsPerHour: {
+      'Alfa.k1PerHour': 1e-8,
+      'Alfa.k2PerHour': 1e-8,
+    },
+  });
+  assert.equal(fit.converged, true);
+  assert.ok(fit.sumSquaredResiduals < 1e-24);
+  const amplitude = fit.localAmplitudesMicromoles.singular;
+  assert.ok(Math.abs(amplitude.A + amplitude.B - 3) < 1e-8);
+});
+
 test('rejects invalid model, ids and iron labels', () => {
   const series = makeSeries('a1', 'Alfa', 0.42, 0.008, 2.2, 20.5);
   assert.throws(() => fitQinModel4('4L', [series, series], { weighting: 'unweighted', zeroStandardDeviation: 'unweighted' }), /unique/);
