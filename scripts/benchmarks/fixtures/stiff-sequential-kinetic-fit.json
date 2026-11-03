@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "description": "Stiff sequential first-order A->B->C fit fixture generated with SciPy 1.17.0 solve_ivp BDF.",
+  "species_ids": ["A", "B", "C"],
+  "initial_concentrations": {"A": 1.0, "B": 0.0, "C": 0.0},
+  "reactions": [
+    {"id": "k1", "reactants": [{"species_id": "A", "coefficient": 1}], "products": [{"species_id": "B", "coefficient": 1}]},
+    {"id": "k2", "reactants": [{"species_id": "B", "coefficient": 1}], "products": [{"species_id": "C", "coefficient": 1}]}
+  ],
+  "times_seconds": [0.0, 1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 0.1, 1.0, 10.0, 50.0, 100.0],
+  "observed_concentrations": [
+    [1.0, 0.0, 0.0],
+    [0.9920319148374844, 0.007968083965709083, 1.1968062859136963e-09],
+    [0.9607894391510685, 0.03921053124497794, 2.960395331388941e-08],
+    [0.9231163463846266, 0.07688353675250141, 1.1686287178569699e-07],
+    [0.6703200460508074, 0.32967731696107794, 2.636988114522073e-06],
+    [0.4493289641598516, 0.5506616861033725, 9.349736775623489e-06],
+    [0.018315638908291357, 0.9815711812604432, 0.0001131798312652123],
+    [0.00033546263021200505, 0.9994020599425362, 0.0002624774272518173],
+    [1.474109659706527e-16, 0.9970418845740519, 0.002958115425947546],
+    [9.655320013018436e-17, 0.9704819266197088, 0.029518073380290794],
+    [7.574720010700262e-27, 0.7408460024140208, 0.25915399758597485],
+    [4.663595529550778e-69, 0.22313852790383595, 0.7768614720960844],
+    [0.0, 0.04978893548855253, 0.9502110645113256]
+  ],
+  "standard_deviation": 1e-5,
+  "true_parameters": {"k1": 800.0, "k2": 0.03},
+  "parameter_bounds": {"lower": [100.0, 0.001], "upper": [2000.0, 0.1]},
+  "typescript_fit": {
+    "initial_guess": [600.0, 0.02],
+    "relative_tolerance": 1e-7,
+    "absolute_tolerance": 1e-12,
+    "maximum_steps": 500000,
+    "maximum_newton_iterations": 15,
+    "maximum_iterations": 120,
+    "convergence_tolerance": 1e-8,
+    "parameter_tolerance": [0.1, 1e-5],
+    "weighted_rss_tolerance": 0.001,
+    "prediction_tolerance": 5e-5
+  },
+  "scipy_reference": {
+    "version": "1.17.0",
+    "method": "solve_ivp(method='BDF') inside bounded least_squares",
+    "rtol": 1e-10,
+    "atol": 1e-12,
+    "parameters": {"k1": 800.0000004895647, "k2": 0.030000000017732734},
+    "weighted_residual_sum_squares": 3.8916838309614554e-10,
+    "parameter_tolerance": 1e-6,
+    "weighted_rss_tolerance": 1e-4
+  }
+}
