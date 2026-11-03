@@ -25,7 +25,7 @@ function fakeToolkit(overrides: Partial<RDKitMolecule> = {}, hasInchi = true) {
 test('RDKit molecular identity adapter', async t => {
   await t.test('prefers same-origin versioned assets and retains an exact pinned CDN fallback', () => {
     assert.equal(RDKIT_VERSION,'2026.9.1');
-    assert.equal(RDKIT_LOCAL_BASE,'/vendor/rdkit/');
+    assert.equal(RDKIT_LOCAL_BASE,'/vendor/rdkit/2026.9.1/');
     assert.equal(RDKIT_CDN_BASE,'https://cdn.jsdelivr.net/npm/@rdkit/rdkit@2026.9.1/dist/');
   });
   await t.test('returns canonical isomeric SMILES, InChI, InChIKey and structural metadata', () => {
