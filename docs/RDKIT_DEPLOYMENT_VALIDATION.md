@@ -35,6 +35,18 @@ CI installs Chromium and runs `scripts/benchmarks/verify_rdkit_browser.mjs` agai
 
 A separate local asset integrity check validates the RDKit manifest, file presence and WebAssembly magic bytes. The Node runtime smoke test continues to validate canonical SMILES, InChI, InChIKey, stereochemistry, isomer distinction and invalid valence against the pinned package.
 
+## Observed Vercel preview HTTP validation
+
+The Vercel preview for the local-assets implementation reached `READY` at deployment `dpl_EHXzwypzesUtrYrVTTrmjGrqNMoy` (branch `deployment/rdkit-local-assets-csp-v1`, commit `eef72cef40448305c910aff540ca5d9fb7d54072`). Authenticated deployment fetches returned HTTP 200 for the application root, `/sw.js`, `/vendor/rdkit/manifest.json`, `/vendor/rdkit/RDKit_minimal.js`, and `/vendor/rdkit/RDKit_minimal.wasm`.
+
+Observed response properties:
+- The root document returns the configured Content-Security-Policy, including `'wasm-unsafe-eval'`, same-origin scripts, the pinned CDN fallback, Google Fonts, and Vercel preview feedback origins.
+- `/sw.js` returns `Cache-Control: no-cache` and `Service-Worker-Allowed: /`.
+- The manifest reports RDKit.js 2026.9.1 and lists the MinimalLib JS and WASM assets.
+- The JavaScript asset returns `application/javascript`; the WASM asset returns `application/wasm`. Both receive `public, max-age=31536000, immutable`.
+
+These are deployed HTTP/header/asset checks. The Chromium CSP and offline reload test in CI is the browser execution gate; it runs against the exact Vite build output and CSP values. The protected Vercel preview itself remains behind Vercel Authentication and was not made public for automated testing.
+
 ## Vercel project protection and release status
 
 The `chemistry-lab` Vercel project is linked to `yobi369/Chemistry-Lab`, uses the Vite framework and builds to `dist`. Preview/deployment URLs remain protected by Vercel Authentication (`all_except_custom_domains`); no public preview access was enabled to make testing easier. The Vercel build command installs the pinned RDKit package before running `bun run build`.
