@@ -78,7 +78,7 @@ The current fit set uses the 31 experimental conditions listed in published Mode
 
 ## Extended 500 × 3 experiment (1,500 resamples per model)
 
-The extended CI experiment completed successfully on the corrected 31-condition / 279-observation set. Each of the three seeds completed 500/500 fits for both models: **1,500/1,500 converged Model 4L fits and 1,500/1,500 converged Model 4G fits**, with zero failed replicates. Each seed exceeded the 95% convergence gate. The full raw-sample report is archived as `qin-model4-multiseed-bootstrap` in workflow run `41620562373` (commit `79b50905f139a3516d88addd7bc0d42ebba86ecc`).
+The extended CI experiment completed successfully on the corrected 31-condition / 279-observation set. Each of the three seeds completed 500/500 fits for both models: **1,500/1,500 converged Model 4L fits and 1,500/1,500 converged Model 4G fits**, with zero failed replicates. Each seed exceeded the 95% convergence gate. The full raw-sample report is archived as `qin-model4-multiseed-bootstrap` in workflow run `41624945167` (commit `d51439c1da5e16363f294743782705a34261651f`).
 
 The most important result is persistent boundary mass, not a reassuringly narrow interval:
 
