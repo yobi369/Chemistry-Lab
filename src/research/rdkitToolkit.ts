@@ -1,11 +1,11 @@
 /**
  * Browser-side adapter for the official RDKit.js MinimalLib WebAssembly build.
- * The pinned runtime is loaded lazily from jsDelivr; no molecule data is sent
- * to a remote service. InChI generation is feature-detected and fails closed
+ * The pinned runtime is loaded lazily from same-origin, versioned public assets;
+ * no molecule data or RDKit assets are fetched from a third-party CDN. InChI generation is feature-detected and fails closed
  * if the distributed WASM build does not expose the InChI API.
  */
 export const RDKIT_VERSION = '2026.9.1';
-export const RDKIT_CDN_BASE = `https://cdn.jsdelivr.net/npm/@rdkit/rdkit@${RDKIT_VERSION}/dist/`;
+export const RDKIT_ASSET_BASE = `/vendor/rdkit/${RDKIT_VERSION}/`;
 
 export interface RDKitMolecule {
   get_smiles(options?: string): string;
@@ -58,17 +58,27 @@ export async function loadRDKitToolkit(): Promise<RDKitModule> {
           return;
         }
         const script = document.createElement('script');
-        script.src = `${RDKIT_CDN_BASE}RDKit_minimal.js`;
+        const manifestResponse = await fetch(`${RDKIT_ASSET_BASE}manifest.json`, { cache: 'no-cache' });
+        if (!manifestResponse.ok) throw new Error('Could not load the local RDKit asset manifest.');
+        const manifest = await manifestResponse.json() as {
+          version?: string;
+          files?: Record<string, { integrity?: string }>;
+        };
+        if (manifest.version !== RDKIT_VERSION) throw new Error('Local RDKit asset version does not match the application pin.');
+        const integrity = manifest.files?.['RDKit_minimal.js']?.integrity;
+        if (!integrity?.startsWith('sha256-')) throw new Error('Local RDKit script integrity metadata is missing.');
+        script.src = `${RDKIT_ASSET_BASE}RDKit_minimal.js`;
+        script.integrity = integrity;
         script.async = true;
         script.crossOrigin = 'anonymous';
         script.dataset.chemistryLabRdkit = 'true';
         script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Could not load the pinned RDKit.js runtime from jsDelivr.'));
+        script.onerror = () => reject(new Error('Could not load the pinned local RDKit.js runtime.'));
         document.head.appendChild(script);
       });
     }
     if (!window.initRDKitModule) throw new Error('RDKit.js loaded without exposing its WebAssembly initializer.');
-    return window.initRDKitModule({ locateFile: file => new URL(file, RDKIT_CDN_BASE).toString() });
+    return window.initRDKitModule({ locateFile: file => new URL(file, new URL(RDKIT_ASSET_BASE, window.location.origin)).toString() });
   })().catch(error => {
     window.__chemistryLabRDKitPromise = undefined;
     throw error;
