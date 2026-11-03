@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
+    "dev": "node scripts/copy-rdkit-assets.mjs && vite --port=3000 --host=0.0.0.0",
+    "build": "node scripts/copy-rdkit-assets.mjs && node scripts/generate-build-meta.mjs && vite build && node scripts/generate-service-worker.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
@@ -29,7 +29,8 @@
     "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "three": "^0.185.1"
+    "three": "^0.185.1",
+    "@rdkit/rdkit": "2026.9.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
