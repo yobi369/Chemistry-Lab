@@ -21,4 +21,5 @@ const wasm = await readFile(path.join(directory, wasmFiles[0]));
 assert.deepEqual([...wasm.subarray(0, 4)], [0, 97, 115, 109], 'WASM asset must have the WebAssembly magic header');
 const glue = await readFile(path.join(directory, 'RDKit_minimal.js'), 'utf8');
 assert.ok(glue.length > 10_000, 'RDKit JavaScript glue should be the actual runtime, not a placeholder');
-console.log(JSON.stringify({version:manifest.version,assets:manifest.files.map(file=>({file,bytes:(await stat(path.join(directory,file))).size})),wasmMagicValid:true},null,2));
+const assets = await Promise.all(manifest.files.map(async file => ({ file, bytes: (await stat(path.join(directory, file))).size })));
+console.log(JSON.stringify({version:manifest.version,assets,wasmMagicValid:true},null,2));
