@@ -55,8 +55,36 @@ function startsFromFit(fit: ReturnType<typeof fitQinModel4>) {
   return Object.fromEntries(Object.entries(fit.rateConstantsPerHour).map(([type, r]) => [type, r])) as typeof starts;
 }
 function profile(model: QinModel4Variant, parameter: string) {
-  const baseline = fitQinModel4(model, series, options(model));
-  if (!baseline.converged) throw new Error(model + ' baseline did not converge: ' + baseline.warnings.join('; '));
+  const initialRates = model === '4L' ? starts : starts4G;
+  const baselineKeys = Object.keys(initialRates) as (keyof typeof initialRates)[];
+  const baselineSeeds = Array.from({ length: 9 }, (_, seed) => {
+    const factor = (index: number) => {
+      if (seed === 0) return 1;
+      if (seed === 1) return index % 2 === 0 ? 0.1 : 10;
+      if (seed === 2) return index % 2 === 0 ? 10 : 0.1;
+      if (seed === 3) return 0.1;
+      if (seed === 4) return 10;
+      if (seed === 5) return index % 2 === 0 ? 0.03 : 3;
+      if (seed === 6) return index % 2 === 0 ? 3 : 0.03;
+      if (seed === 7) return 0.3;
+      return 3;
+    };
+    return Object.fromEntries(baselineKeys.map((type, index) => {
+      const base = initialRates[type];
+      return [type, {
+        k1PerHour: Math.min(10, Math.max(1e-8, base.k1PerHour * factor(index * 2))),
+        k2PerHour: Math.min(10, Math.max(1e-8, base.k2PerHour * factor(index * 2 + 1))),
+      }];
+    })) as typeof initialRates;
+  });
+  const baselineCandidates = [initialRates, ...baselineSeeds].map(seed =>
+    fitQinModel4(model, series, options(model, seed)));
+  const baseline = baselineCandidates.reduce<ReturnType<typeof fitQinModel4> | null>(
+    (best, candidate) => candidate.converged &&
+      (!best || candidate.sumSquaredResiduals < best.sumSquaredResiduals) ? candidate : best,
+    null,
+  );
+  if (!baseline) throw new Error(model + ' baseline did not converge from any deterministic start.');
   const [group, parameterName] = parameter.split('.');
   const estimate = group === 'GLOBAL'
     ? baseline.rateConstantsPerHour.Alfa.k1PerHour
