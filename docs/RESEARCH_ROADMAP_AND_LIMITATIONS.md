@@ -26,6 +26,12 @@ The standard-state helper calculates ΔG°=ΔH°−TΔS° and ln K°=−ΔG°/(R
 
 These are standard-state relationships. The user must provide consistent standard-state thermodynamic data, temperature, activities and reaction quotient. The functions do not calculate activity coefficients, non-ideal solution behaviour, heat capacities, phase transitions, electrochemical potentials or pressure corrections. Equilibrium constants are dimensionless under a defined standard-state convention.
 
+## Stiff ODE integration
+
+`simulateMassActionMechanismAdaptiveImplicit` adds a simulation-only adaptive backward-Euler solver with damped Newton iterations and step-doubling error control. It is tested against independent SciPy BDF and Radau references for the Robertson (1966) stiff kinetics problem through 10^5 seconds, including positivity and conserved-total checks.
+
+Backward Euler is A-stable and L-stable but first order. This implementation uses a dense finite-difference Jacobian and is not a variable-order BDF or Radau solver. The multi-step nonlinear parameter fitter still uses fixed-step RK4; fitting, parameter sensitivities and covariance have not yet been connected to the implicit solver. See `docs/STIFF_KINETIC_INTEGRATION.md` for the method, API and validation boundary.
+
 ## Reaction-network and thermodynamic integration boundary
 
 The existing stochastic network remains a well-mixed continuous-time Markov jump model. Thermodynamic calculations are analysis functions; no automatic reverse-rate generation or detailed-balance enforcement is performed. A reversible network must not be inferred from a reversible arrow alone. Forward and reverse kinetic parameters and a clearly defined standard-state convention are required before coupling kinetics and equilibrium.
