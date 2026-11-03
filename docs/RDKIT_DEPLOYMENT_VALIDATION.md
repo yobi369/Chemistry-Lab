@@ -37,10 +37,11 @@ A separate local asset integrity check validates the RDKit manifest, file presen
 
 ## Observed Vercel preview HTTP validation
 
-The Vercel preview for the local-assets implementation reached `READY` at deployment `dpl_EHXzwypzesUtrYrVTTrmjGrqNMoy` (branch `deployment/rdkit-local-assets-csp-v1`, commit `eef72cef40448305c910aff540ca5d9fb7d54072`). Authenticated deployment fetches returned HTTP 200 for the application root, `/sw.js`, `/vendor/rdkit/2026.9.1/manifest.json`, `/vendor/rdkit/RDKit_minimal.js`, and `/vendor/rdkit/2026.9.1/RDKit_minimal.wasm`.
+The latest Vercel preview for this branch reached `READY` at deployment `dpl_HQzigXtu8ciSGxVHuNoEUEFSyizF` (commit `ec30857295097c9888b9169dd19bb5c7dd9cddbd`). Authenticated deployment fetches returned HTTP 200 for the application root, `/sw.js`, `/vendor/rdkit/2026.9.1/manifest.json`, `/vendor/rdkit/2026.9.1/RDKit_minimal.js`, and `/vendor/rdkit/2026.9.1/RDKit_minimal.wasm`.
 
 Observed response properties:
 - The root document returns the configured Content-Security-Policy, including `'wasm-unsafe-eval'`, same-origin scripts, the pinned CDN fallback, Google Fonts, and Vercel preview feedback origins.
+- Baseline security headers are present: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, strict-origin referrer policy, and a restrictive Permissions Policy. Vercel supplies HSTS.
 - `/sw.js` returns `Cache-Control: no-cache` and `Service-Worker-Allowed: /`.
 - The manifest reports RDKit.js 2026.9.1 and lists the MinimalLib JS and WASM assets.
 - The JavaScript asset returns `application/javascript`; the WASM asset returns `application/wasm`. Both receive `public, max-age=31536000, immutable`.
