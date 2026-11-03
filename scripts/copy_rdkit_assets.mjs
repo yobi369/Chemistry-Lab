@@ -17,7 +17,7 @@ try {
 }
 
 const files = entries
-  .filter(entry => entry.isFile() && /^RDKit_minimal.*\\.(?:js|wasm|data)$/.test(entry.name))
+  .filter(entry => entry.isFile() && /^RDKit_minimal.*\.(?:js|wasm|data)$/.test(entry.name))
   .map(entry => entry.name)
   .sort();
 if (!files.includes('RDKit_minimal.js') || !files.some(name => name.endsWith('.wasm'))) {
@@ -30,5 +30,5 @@ await writeFile(path.join(destination, 'manifest.json'), JSON.stringify({
   toolkit: 'RDKit.js',
   version: '2026.9.1',
   files,
-}, null, 2) + '\\n');
+}, null, 2) + '\n');
 console.log('Copied pinned RDKit.js assets:', files.join(', '));
