@@ -115,6 +115,9 @@ function run(variant: QinModel4Variant, seed: number) {
     upperBoundHitCounts: upperBoundHits,
     intervals95: Object.fromEntries(Object.entries(samples).map(([key, values]) =>
       [key, summarizeBootstrap(values, baselineValues[key], minimum)])),
+    // Retain every converged replicate so reviewers can inspect skew, multimodality,
+    // outliers and boundary pile-ups rather than relying only on percentile summaries.
+    bootstrapSamples: samples,
     requestedReplicates: replicates, convergedReplicates, failedReplicates,
     seed, resamplingUnit: 'experimental series, stratified within iron type',
   };
