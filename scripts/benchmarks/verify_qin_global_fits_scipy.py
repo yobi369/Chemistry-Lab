@@ -198,8 +198,10 @@ for variant, ts_key, target in [
             raise RuntimeError(f"{variant} Alfa blank {parameter}: SciPy and TypeScript differ ({a} vs {b}).")
     if abs(scipy_fit["reducedResidualStatistic"] - target) > (0.15 if variant == "4L" else 0.2):
         raise RuntimeError(variant + " does not reproduce the paper's published statistic.")
+    prediction_comparison = compare_complete_predictions(ts_fit["fitted"], scipy_fit["fitted"])
     results[variant] = {
-        "scipy": {k: v for k, v in scipy_fit.items() if k != "localAmplitudes"},
+        "completePredictionResidualComparison": prediction_comparison,
+        "scipy": {k: v for k, v in scipy_fit.items() if k not in ("localAmplitudes", "fitted")},
         "typescriptReducedStatistic": ts_fit["reducedChiSquare"],
         "publishedReducedStatistic": target,
     }
