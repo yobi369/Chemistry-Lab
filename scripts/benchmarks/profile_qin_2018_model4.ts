@@ -62,7 +62,7 @@ function profile(model: QinModel4Variant, parameter: string) {
   const estimate = group === 'GLOBAL'
     ? baseline.rateConstantsPerHour.Alfa.k1PerHour
     : baseline.rateConstantsPerHour[group]?.[parameterName === 'k1PerHour' ? 'k1PerHour' : 'k2PerHour'];
-  if (!Number.isFinite(estimate)) throw new Error('Could not resolve baseline parameter ' + parameter);
+  if (estimate === undefined || !Number.isFinite(estimate)) throw new Error('Could not resolve baseline parameter ' + parameter);
   const n = baseline.includedObservationCount;
   const cutoff = 3.841458820694124;
   const rates = startsFromFit(baseline);
