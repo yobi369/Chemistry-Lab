@@ -165,7 +165,7 @@ test('multi-step nonlinear mass-action kinetic fitting', async t => {
       assert.ok(Math.abs(fit.parameterEstimates[reactionId] - reference.parameters[reactionId]) <= tolerance,
         reactionId + ' parameter estimate differs from SciPy BDF: ' + JSON.stringify(fit.parameterEstimates));
     }
-    assert.ok(fit.weightedResidualSumSquares <= reference.weighted_residual_sum_squares + reference.weighted_rss_tolerance);
+    assert.ok(fit.weightedResidualSumSquares <= reference.weighted_residual_sum_squares + reference.weighted_rss_tolerance, JSON.stringify({ rss: fit.weightedResidualSumSquares, estimates: fit.parameterEstimates, diagnostics: fit.integrationDiagnostics, fittedMaxError: Math.max(...fit.fitted.map(row => Math.abs(row.predicted - row.observed))) }));
     assert.ok(fit.integrationDiagnostics);
     assert.ok(fit.integrationDiagnostics.acceptedSteps > 0);
     assert.ok(fit.fitted.every(row => Math.abs(row.predicted - row.observed) <= reference.prediction_tolerance));
