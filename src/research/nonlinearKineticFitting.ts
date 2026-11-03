@@ -1,4 +1,5 @@
 import { SimulationInputError } from './gillespie';
+import { simulateMassActionMechanismAdaptiveImplicit, type AdaptiveImplicitOptions } from './stiffKineticSolver';
 
 export interface KineticStoichiometricTerm {
   readonly speciesId: string;
@@ -31,12 +32,18 @@ export interface MechanismObservation {
   readonly standardDeviation?: number;
 }
 export interface NonlinearFitOptions {
+  /** Defaults to fixed-step RK4 to preserve existing behavior. */
+  readonly integrator?: 'rk4' | 'adaptive-implicit';
   readonly maxIntegrationStepSeconds?: number;
+  readonly adaptiveImplicitOptions?: AdaptiveImplicitOptions;
   readonly maxIterations?: number;
   readonly convergenceTolerance?: number;
 }
 export interface NonlinearKineticFit {
-  readonly model: 'mass-action-mechanism-rk4-levenberg-marquardt';
+  readonly model: 'mass-action-mechanism-rk4-levenberg-marquardt' | 'mass-action-mechanism-adaptive-implicit-levenberg-marquardt';
+  readonly integrator: 'rk4' | 'adaptive-implicit';
+  readonly integrationDiagnostics: { readonly acceptedSteps: number; readonly rejectedSteps: number; readonly newtonIterations: number; readonly functionEvaluations: number; readonly relativeTolerance: number; readonly absoluteTolerance: number } | null;
+  readonly integrationFailures: number;
   readonly parameterEstimates: Readonly<Record<string, number>>;
   readonly standardErrors: Readonly<Record<string, number>> | null;
   readonly correlationMatrix: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
@@ -294,6 +301,9 @@ export function fitMassActionMechanism(
   if (hasSd && observations.some(o => o.standardDeviation === undefined)) {
     throw new SimulationInputError('Supply standard deviations for all observations or none.');
   }
+  const integrator = options.integrator ?? 'rk4';
+  if (integrator !== 'rk4' && integrator !== 'adaptive-implicit')
+    throw new SimulationInputError('Choose RK4 or adaptive-implicit integration.');
   const maxStep = options.maxIntegrationStepSeconds ?? 0.01;
   const maxIterations = options.maxIterations ?? 200;
   const tolerance = options.convergenceTolerance ?? 1e-8;
@@ -304,25 +314,64 @@ export function fitMassActionMechanism(
   const parameterOrder = parameters.map(p => p.reactionId);
   const orderedParameters = parameterOrder.map(id => parameters.find(p => p.reactionId === id)!);
   const weights = observations.map(o => hasSd ? 1 / o.standardDeviation! : 1);
+  let integrationFailures = 0;
+  let lastAdaptiveDiagnostics: NonlinearKineticFit['integrationDiagnostics'] = null;
   const predict = (theta: readonly number[]) => {
-    const rates = mechanism.reactions.map(r => theta[parameterOrder.indexOf(r.id)]);
-    const states = integrate(mechanism, rates, sortedTimes, maxStep);
+    let states: Map<number, number[]>;
+    if (integrator === 'rk4') {
+      const rates = mechanism.reactions.map(r => theta[parameterOrder.indexOf(r.id)]);
+      states = integrate(mechanism, rates, sortedTimes, maxStep);
+    } else {
+      const rates = Object.fromEntries(mechanism.reactions.map(reaction =>
+        [reaction.id, theta[parameterOrder.indexOf(reaction.id)]]));
+      const simulation = simulateMassActionMechanismAdaptiveImplicit(
+        mechanism, rates, sortedTimes, options.adaptiveImplicitOptions,
+      );
+      states = new Map(simulation.results.map(result => [
+        result.timeSeconds, mechanism.speciesIds.map(id => result.concentrations[id]),
+      ]));
+      lastAdaptiveDiagnostics = {
+        acceptedSteps: simulation.acceptedSteps,
+        rejectedSteps: simulation.rejectedSteps,
+        newtonIterations: simulation.newtonIterations,
+        functionEvaluations: simulation.functionEvaluations,
+        relativeTolerance: simulation.relativeTolerance,
+        absoluteTolerance: simulation.absoluteTolerance,
+      };
+    }
     return observations.map(o => states.get(o.timeSeconds)![mechanism.speciesIds.indexOf(o.speciesId)]);
   };
-  const residual = (theta: readonly number[]) => predict(theta).map((value, i) => (value - observations[i].value) * weights[i]);
+  const residual = (theta: readonly number[]): number[] | null => {
+    try {
+      return predict(theta).map((value, i) => (value - observations[i].value) * weights[i]);
+    } catch (error) {
+      if (integrator === 'adaptive-implicit' && error instanceof SimulationInputError) {
+        integrationFailures++;
+        return null;
+      }
+      throw error;
+    }
+  };
   const objective = (r: readonly number[]) => dot(r, r);
   let theta = orderedParameters.map(p => p.initialGuess);
-  let current = residual(theta), cost = objective(current), lambda = 1e-3, converged = false, iterations = 0;
+  const initialResidual = residual(theta);
+  if (!initialResidual) throw new SimulationInputError('Initial parameter guess failed adaptive integration; adjust the initial guess or solver tolerances.');
+  let current = initialResidual, cost = objective(current), lambda = 1e-3, converged = false, iterations = 0;
   const jacobianAt = (point: readonly number[]) => {
     const base = residual(point);
+    if (!base) throw new SimulationInputError('Current optimizer point failed adaptive integration.');
     return point.map((value, j) => {
       const step = Math.max(Math.abs(value)*1e-5, 1e-8);
       const plus = [...point], minus = [...point];
       plus[j] = Math.min(orderedParameters[j].upperBound, value+step);
       minus[j] = Math.max(orderedParameters[j].lowerBound, value-step);
       if (plus[j] === minus[j]) return base.map(() => 0);
-      const rp = residual(plus), rm = residual(minus), width = plus[j]-minus[j];
-      return rp.map((v, i) => (v-rm[i])/width);
+      const rp = residual(plus), rm = residual(minus);
+      const width = plus[j]-minus[j];
+      if (rp && rm) return rp.map((v, i) => (v-rm[i])/width);
+      if (rp) return rp.map((v, i) => (v-base[i])/(plus[j]-value));
+      if (rm) return rm.map((v, i) => (base[i]-v)/(value-minus[j]));
+      return base.map(() => 0);
     }).reduce((rows, column, j) => {
       for (let i = 0; i < column.length; i++) rows[i][j] = column[i];
       return rows;
@@ -338,7 +387,13 @@ export function fitMassActionMechanism(
     if (!delta) break;
     const candidate = theta.map((v,i)=>Math.max(orderedParameters[i].lowerBound,
       Math.min(orderedParameters[i].upperBound,v+delta[i])));
-    const candidateResidual = residual(candidate), candidateCost = objective(candidateResidual);
+    const candidateResidual = residual(candidate);
+    if (!candidateResidual) {
+      lambda = Math.min(lambda*10,1e16);
+      if (lambda >= 1e16) break;
+      continue;
+    }
+    const candidateCost = objective(candidateResidual);
     if (candidateCost < cost) {
       const improvement = cost-candidateCost;
       theta = candidate; current = candidateResidual; cost = candidateCost; lambda = Math.max(lambda/3,1e-12);
@@ -368,6 +423,7 @@ export function fitMassActionMechanism(
   const locallyIdentifiable = information.rank === n && condition <= 1e10;
   const warnings: string[] = [];
   if (!converged) warnings.push('Optimizer did not meet the convergence criterion; inspect residuals and initial guesses.');
+  if (integrationFailures > 0) warnings.push(integrationFailures + ' trial parameter vectors failed adaptive integration and were rejected.');
   if (information.rank < n) warnings.push(`Sensitivity Jacobian rank ${information.rank} of ${n}; some parameters are locally unidentifiable and covariance is unavailable.`);
   if (information.rank === n && !inverseNormalized) warnings.push('Scaled sensitivity information matrix could not be stably inverted; parameter uncertainties and correlations are unavailable.');
   if (condition > 1e10) warnings.push('Large scaled information-matrix condition number indicates practical parameter non-identifiability.');
@@ -377,7 +433,10 @@ export function fitMassActionMechanism(
       theta[i] >= p.upperBound-1e-8*Math.max(1,p.upperBound-p.lowerBound))) warnings.push('At least one estimate is at a parameter bound; local symmetric covariance intervals may be misleading.');
   const fittedValues = predict(theta);
   return {
-    model:'mass-action-mechanism-rk4-levenberg-marquardt',
+    model: integrator === 'rk4' ? 'mass-action-mechanism-rk4-levenberg-marquardt' : 'mass-action-mechanism-adaptive-implicit-levenberg-marquardt',
+    integrator,
+    integrationDiagnostics: lastAdaptiveDiagnostics,
+    integrationFailures,
     parameterEstimates:Object.fromEntries(parameterOrder.map((id,i)=>[id,theta[i]])),
     standardErrors, correlationMatrix:correlations, covarianceMatrix:covariance,
     identifiableParameterCount:information.rank, parameterCount:n, locallyIdentifiable,
