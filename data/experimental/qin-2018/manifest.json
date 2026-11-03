@@ -1,0 +1,14 @@
+{
+  "dataset": "Raw data from Qin et al. (2018)",
+  "datasetDoi": "10.5281/zenodo.1979080",
+  "publicationDoi": "10.1021/acs.est.8b04436",
+  "filename": "QinTratnyek18-H2vsTime-Data.csv",
+  "downloadUrl": "https://zenodo.org/records/1979080/files/QinTratnyek18-H2vsTime-Data.csv?download=1",
+  "md5": "31d726a893ac0e803e6471f5927d875e",
+  "license": "CC-BY-4.0",
+  "expectedExperimentCount": 35,
+  "timeUnit": "hour",
+  "hydrogenAmountUnit": "micromole",
+  "standardDeviationUnit": "micromole",
+  "retrievalPolicy": "Download the versioned Zenodo file and verify its published checksum before parsing."
+}
