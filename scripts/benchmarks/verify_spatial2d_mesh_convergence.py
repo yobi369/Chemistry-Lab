@@ -56,10 +56,14 @@ def calculate(mesh, domain, settings):
     exact = 1.0 + 0.2 * np.cos(np.pi * xx / width) * np.cos(np.pi * yy / height) * np.exp(
         -diffusion * np.pi**2 * (width**-2 + height**-2) * final_time
     )
+    discrete_lambda_x = 4.0 / dx**2 * np.sin(np.pi / (2.0 * n)) ** 2
+    discrete_lambda_y = 4.0 / dy**2 * np.sin(np.pi / (2.0 * n)) ** 2
+    bdf_amplitude_factor = np.exp(-diffusion * (discrete_lambda_x + discrete_lambda_y) * final_time)
     return {
         "cells": n,
         "steps": steps,
         "timeStepSeconds": dt,
+        "bdfAmplitudeFactor": float(bdf_amplitude_factor),
         "maxAbsExplicitVsBdf": float(np.max(np.abs(explicit - references["BDF"]))),
         "maxAbsBdfRadau": float(np.max(np.abs(references["BDF"] - references["Radau"]))),
         "maxAbsBdfVsContinuum": float(np.max(np.abs(references["BDF"] - exact))),
@@ -76,6 +80,8 @@ def main():
         for key in ("steps",):
             if actual[key] != expected[key]:
                 raise RuntimeError(f"{expected['cells']}x{expected['cells']} {key} changed: {actual[key]}")
+        if abs(actual["bdfAmplitudeFactor"] - expected["bdfAmplitudeFactor"]) > 2e-11:
+            raise RuntimeError(f"{expected['cells']}x{expected['cells']} discrete BDF eigenmode differs from fixture")
         for key in ("maxAbsExplicitVsBdf", "maxAbsBdfRadau", "maxAbsBdfVsContinuum"):
             if abs(actual[key] - expected[key]) > max(1e-12, abs(expected[key]) * 2e-5):
                 raise RuntimeError(f"{expected['cells']}x{expected['cells']} {key} differs from pinned reference")
