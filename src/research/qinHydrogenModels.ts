@@ -112,7 +112,7 @@ export function fitQinAlternativeModel(
     const defaults = options.initialRatesByIronType?.[type] ?? { k1PerHour: 0.4, k2PerHour: 0.008 };
     if (name === 'k1') return Math.log(defaults.k1PerHour);
     if (name === 'k2') return Math.log(defaults.k2PerHour);
-    return Math.log(10);
+    return Math.log(options.initialRatiosByIronType?.[type] ?? 10);
   });
   if (initial.some(v => !finite(v))) throw new QinModel4FitError('Initial rates must be finite.');
   const decode = (theta: readonly number[], type: QinIronType) => {
