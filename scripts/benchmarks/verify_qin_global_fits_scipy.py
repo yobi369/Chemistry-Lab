@@ -125,8 +125,10 @@ def compare_complete_predictions(ts_rows, scipy_rows):
     if len(ts_rows) != len(scipy_rows):
         raise RuntimeError("TypeScript and SciPy fitted observation counts differ.")
     by_iron = {}
+    by_experiment = {}
     all_prediction_delta = []
     all_residual_delta = []
+    row_comparisons = []
     for index, (ts_row, scipy_row) in enumerate(zip(ts_rows, scipy_rows)):
         for key in ("experimentId", "ironType"):
             if ts_row[key] != scipy_row[key]:
@@ -135,16 +137,28 @@ def compare_complete_predictions(ts_rows, scipy_rows):
             if abs(ts_row[key] - scipy_row[key]) > 1e-12:
                 raise RuntimeError(f"Fitted row {index} source-data mismatch for {key}.")
         iron = ts_row["ironType"]
-        group = by_iron.setdefault(iron, {"predictionDelta": [], "residualDelta": [],
-            "typescriptResiduals": [], "scipyResiduals": []})
+        experiment = ts_row["experimentId"]
         prediction_delta = scipy_row["predictedMicromoles"] - ts_row["predictedMicromoles"]
         residual_delta = scipy_row["residualMicromoles"] - ts_row["residualMicromoles"]
-        group["predictionDelta"].append(prediction_delta)
-        group["residualDelta"].append(residual_delta)
-        group["typescriptResiduals"].append(ts_row["residualMicromoles"])
-        group["scipyResiduals"].append(scipy_row["residualMicromoles"])
+        for collection, key in ((by_iron, iron), (by_experiment, experiment)):
+            group = collection.setdefault(key, {"predictionDelta": [], "residualDelta": [],
+                "typescriptResiduals": [], "scipyResiduals": []})
+            group["predictionDelta"].append(prediction_delta)
+            group["residualDelta"].append(residual_delta)
+            group["typescriptResiduals"].append(ts_row["residualMicromoles"])
+            group["scipyResiduals"].append(scipy_row["residualMicromoles"])
         all_prediction_delta.append(prediction_delta)
         all_residual_delta.append(residual_delta)
+        row_comparisons.append({
+            "experimentId": experiment, "label": ts_row["label"], "ironType": iron,
+            "timeHours": ts_row["timeHours"], "observedMicromoles": ts_row["observedMicromoles"],
+            "typescriptPredictedMicromoles": ts_row["predictedMicromoles"],
+            "scipyPredictedMicromoles": scipy_row["predictedMicromoles"],
+            "predictionDifferenceMicromoles": prediction_delta,
+            "typescriptResidualMicromoles": ts_row["residualMicromoles"],
+            "scipyResidualMicromoles": scipy_row["residualMicromoles"],
+            "residualDifferenceMicromoles": residual_delta,
+        })
 
     def summarize(group):
         pred = np.asarray(group["predictionDelta"], dtype=float)
@@ -152,6 +166,8 @@ def compare_complete_predictions(ts_rows, scipy_rows):
         ts_resid = np.asarray(group["typescriptResiduals"], dtype=float)
         scipy_resid = np.asarray(group["scipyResiduals"], dtype=float)
         corr = float(np.corrcoef(ts_resid, scipy_resid)[0, 1]) if np.std(ts_resid) and np.std(scipy_resid) else None
+        ts_sse = float(np.dot(ts_resid, ts_resid))
+        scipy_sse = float(np.dot(scipy_resid, scipy_resid))
         return {
             "observationCount": int(len(pred)),
             "predictionRmseMicromoles": float(np.sqrt(np.mean(pred ** 2))),
@@ -159,8 +175,9 @@ def compare_complete_predictions(ts_rows, scipy_rows):
             "residualRmseMicromoles": float(np.sqrt(np.mean(resid ** 2))),
             "residualMaxAbsDifferenceMicromoles": float(np.max(np.abs(resid))),
             "residualPearsonCorrelation": corr,
-            "typescriptResidualSumSquares": float(np.dot(ts_resid, ts_resid)),
-            "scipyResidualSumSquares": float(np.dot(scipy_resid, scipy_resid)),
+            "typescriptResidualSumSquares": ts_sse,
+            "scipyResidualSumSquares": scipy_sse,
+            "relativeSseDifference": abs(ts_sse - scipy_sse) / max(ts_sse, scipy_sse, 1e-12),
         }
     return {
         "observationCount": len(ts_rows),
@@ -170,6 +187,8 @@ def compare_complete_predictions(ts_rows, scipy_rows):
             "scipyResiduals": [r["residualMicromoles"] for r in scipy_rows],
         }),
         "byIronType": {iron: summarize(group) for iron, group in by_iron.items()},
+        "byExperiment": {experiment: summarize(group) for experiment, group in by_experiment.items()},
+        "rowComparisons": row_comparisons,
     }
 
 results = {}
@@ -199,6 +218,19 @@ for variant, ts_key, target in [
     if abs(scipy_fit["reducedResidualStatistic"] - target) > (0.15 if variant == "4L" else 0.2):
         raise RuntimeError(variant + " does not reproduce the paper's published statistic.")
     prediction_comparison = compare_complete_predictions(ts_fit["fitted"], scipy_fit["fitted"])
+    thresholds = {
+        "4L": {"predictionRmseMicromoles": 1e-4, "predictionMaxAbsDifferenceMicromoles": 1e-3},
+        "4G": {"predictionRmseMicromoles": 5e-6, "predictionMaxAbsDifferenceMicromoles": 2e-5},
+    }[variant]
+    comparison = prediction_comparison["overall"]
+    if comparison["predictionRmseMicromoles"] > thresholds["predictionRmseMicromoles"] or \
+       comparison["predictionMaxAbsDifferenceMicromoles"] > thresholds["predictionMaxAbsDifferenceMicromoles"] or \
+       comparison["residualPearsonCorrelation"] is None or comparison["residualPearsonCorrelation"] < 0.99999 or \
+       comparison["relativeSseDifference"] > 1e-7:
+        raise RuntimeError(variant + " complete prediction/residual comparison exceeded documented numerical tolerances.")
+    prediction_comparison["acceptanceThresholds"] = thresholds
+    prediction_comparison["relativeSseDifferenceMaximum"] = 1e-7
+    prediction_comparison["minimumResidualCorrelation"] = 0.99999
     results[variant] = {
         "completePredictionResidualComparison": prediction_comparison,
         "scipy": {k: v for k, v in scipy_fit.items() if k not in ("localAmplitudes", "fitted")},
