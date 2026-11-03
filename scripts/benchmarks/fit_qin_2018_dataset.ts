@@ -54,6 +54,7 @@ function summarize(fit: ReturnType<typeof fitQinModel4>) {
     alfaBlank: fit.localAmplitudesMicromoles['35'],
     identifiable: fit.locallyIdentifiable,
     conditionNumber: fit.informationConditionNumber,
+    alfaBlankStandardErrors: fit.standardErrors ? { A: fit.standardErrors['35.A'], B: fit.standardErrors['35.B'], k1PerHour: fit.standardErrors['Alfa.k1PerHour'], k2PerHour: fit.standardErrors['Alfa.k2PerHour'] } : null,
     warnings: fit.warnings,
   };
 }
