@@ -9,6 +9,14 @@ test('seeded random stream is reproducible and bounded', () => {
   assert.ok(left.every(value => value >= 0 && value < 1));
 });
 
+test('independent seeds produce distinct deterministic resampling streams', () => {
+  const a = createSeededRandom(20261103), b = createSeededRandom(20261104);
+  const first = Array.from({ length: 20 }, a);
+  const second = Array.from({ length: 20 }, b);
+  assert.notDeepEqual(first, second);
+  assert.deepEqual(first, Array.from({ length: 20 }, createSeededRandom(20261103)));
+});
+
 test('empirical percentile uses linear interpolation', () => {
   assert.equal(empiricalPercentile([4, 1, 3, 2], 0.5), 2.5);
   assert.equal(empiricalPercentile([1, 2, 3, 4], 0), 1);
