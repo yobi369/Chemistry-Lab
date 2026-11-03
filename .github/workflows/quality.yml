@@ -92,6 +92,16 @@ jobs:
           python-version: '3.13'
       - name: Install pinned benchmark dependency
         run: python -m pip install -r requirements-benchmarks.txt
+      - name: Independently verify Qin Model 4 profile likelihood with SciPy
+        if: steps.qin_data.outcome == 'success'
+        run: python scripts/benchmarks/verify_qin_model4_profile_scipy.py /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv /tmp/qin-model4-profiles.json > /tmp/qin-model4-profile-scipy.json
+      - name: Archive independent SciPy profile-likelihood comparison
+        if: steps.qin_data.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: qin-model4-profile-scipy-validation
+          path: /tmp/qin-model4-profile-scipy.json
+          retention-days: 30
       - name: Verify stiff sequential kinetic fitting against independent SciPy BDF
         run: python scripts/benchmarks/verify_scipy_stiff_kinetic_fit.py > /tmp/stiff-kinetic-fit-scipy.json
       - name: Archive independent SciPy stiff-fit reference
