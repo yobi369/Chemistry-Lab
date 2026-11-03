@@ -70,4 +70,4 @@ An independent SciPy 1.17 implementation using bounded nonlinear least squares a
 2. Independently confirm the inferred model-specific observation sets against author fitting files if they can be obtained; the current selections are supported by the exact published degrees of freedom and coefficient/statistic reproduction.
 3. Improve multi-start and identifiability handling for weakly constrained Beijing/Hepure phase-2 parameters, preserving non-unique minima and wide uncertainty.
 4. Validate local covariance against the paper's tabulated standard errors and add profile-likelihood/bootstrap intervals for weakly identified parameters.
-5. Add an independent SciPy implementation of all four Qin global fits and compare fitted curves, SSE, global rates, local amplitudes and residual diagnostics against the TypeScript implementation.
+5. Extend the passing independent SciPy comparison to prediction-level residual plots and uncertainty intervals for weakly identified groups.
