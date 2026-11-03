@@ -4,7 +4,7 @@
 
 The production build stages the exact `@rdkit/rdkit@2026.9.1` MinimalLib JavaScript and WASM files into `public/vendor/rdkit/` before Vite builds `dist/`. The package is installed in CI and by the Vercel build command; it is not added to the browser bundle as a remote script dependency. The asset-copy script fails closed in CI/Vercel if the pinned package or expected WASM files are missing.
 
-The browser adapter loads `/vendor/rdkit/2026.9.1/RDKit_minimal.js` first and resolves the WASM file against the same-origin asset directory. It checks the actual runtime version. A pinned jsDelivr URL is retained as a recovery path if local assets are missing or fail to initialize; normal production operation should not request the CDN.
+The browser adapter sends SMILES to a same-origin dedicated worker. That worker loads `/vendor/rdkit/2026.9.1/RDKit_minimal.js` first and resolves the WASM file against the same-origin asset directory. The worker keeps RDKit's required dynamic Embind code generation outside the main application context. It checks the actual runtime version. A pinned jsDelivr URL is retained as a recovery path if local assets are missing or fail to initialize; normal production operation should not request the CDN.
 
 ## Content Security Policy
 
@@ -16,7 +16,7 @@ The browser adapter loads `/vendor/rdkit/2026.9.1/RDKit_minimal.js` first and re
 - Allows the Vercel preview feedback script and its same-origin WebSocket/API connections.
 - Restricts object embedding, form submission, frame ancestors, and worker origins.
 
-The service worker is served with `Cache-Control: no-cache` and `Service-Worker-Allowed: /`. Local RDKit files receive long-lived immutable caching because the RDKit version is pinned and changed assets are deployed with a new build.
+The dedicated `/rdkit-worker.js` script is served with its own CSP and `Cache-Control: no-cache`. The service worker is served with `Cache-Control: no-cache` and `Service-Worker-Allowed: /`. Local RDKit files receive long-lived immutable caching because the RDKit version is pinned and changed assets are deployed with a new build.
 
 ## Offline behavior
 
