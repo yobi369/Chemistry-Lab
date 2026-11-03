@@ -63,7 +63,7 @@ const consoleErrors = [];
 const failedRequests = [];
 page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
 page.on('requestfailed', request => failedRequests.push({url:request.url(),failure:request.failure()?.errorText}));
-page.on('request', request => {
+context.on('request', request => {
   const url = request.url();
   if (url.includes('/vendor/rdkit/')) localAssets.add(new URL(url).pathname);
   if (url.startsWith('https://cdn.jsdelivr.net/npm/@rdkit/rdkit@')) cdnRequests.push(url);
