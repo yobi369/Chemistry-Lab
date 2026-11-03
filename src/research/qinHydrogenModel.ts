@@ -101,14 +101,37 @@ function solveAmplitudes(
     b1 += w * a * o.hydrogenMicromoles; b2 += w * b * o.hydrogenMicromoles;
   });
   const determinant = s11 * s22 - s12 * s12;
-  let A = 0, B = 0;
-  if (determinant > 1e-24) {
-    A = (b1 * s22 - b2 * s12) / determinant;
-    B = (b2 * s11 - b1 * s12) / determinant;
+  // Solve the two-column non-negative least-squares problem by comparing
+  // its feasible active sets. Always evaluate the one-column boundaries:
+  // when the columns are singular or nearly collinear, the unconstrained
+  // 2x2 normal equations are not numerically safe, but a one-column fit may
+  // still explain the observations accurately.
+  const candidateCost = (a: number, b: number) => observations.reduce((sum, o, i) => {
+    const residual = o.hydrogenMicromoles - a * x1[i] - b * x2[i];
+    return sum + (weights[i] ?? 0) * residual * residual;
+  }, 0);
+  const candidates: { A: number; B: number; cost: number }[] = [
+    { A: 0, B: 0, cost: candidateCost(0, 0) },
+    { A: s11 > 0 ? Math.max(0, b1 / s11) : 0, B: 0,
+      cost: candidateCost(s11 > 0 ? Math.max(0, b1 / s11) : 0, 0) },
+    { A: 0, B: s22 > 0 ? Math.max(0, b2 / s22) : 0,
+      cost: candidateCost(0, s22 > 0 ? Math.max(0, b2 / s22) : 0) },
+  ];
+  const determinantScale = Math.max(s11 * s22, 1e-300);
+  if (determinant > 1e-12 * determinantScale) {
+    const unconstrainedA = (b1 * s22 - b2 * s12) / determinant;
+    const unconstrainedB = (b2 * s11 - b1 * s12) / determinant;
+    if (finite(unconstrainedA) && finite(unconstrainedB) &&
+        unconstrainedA >= 0 && unconstrainedB >= 0) {
+      candidates.push({
+        A: unconstrainedA, B: unconstrainedB,
+        cost: candidateCost(unconstrainedA, unconstrainedB),
+      });
+    }
   }
-  if (A < 0 && B < 0) { A = 0; B = 0; }
-  else if (A < 0) { A = 0; B = s22 > 0 ? Math.max(0, b2 / s22) : 0; }
-  else if (B < 0) { B = 0; A = s11 > 0 ? Math.max(0, b1 / s11) : 0; }
+  const best = candidates.reduce((winner, candidate) =>
+    candidate.cost < winner.cost ? candidate : winner);
+  const A = best.A, B = best.B;
   const residuals = observations.map((o, i) => o.hydrogenMicromoles - A * x1[i] - B * x2[i]);
   const cost = residuals.reduce((sum, r, i) => sum + (weights[i] ?? 0) * r * r, 0);
   return { A, B, residuals, cost };
