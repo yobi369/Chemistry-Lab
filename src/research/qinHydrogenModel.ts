@@ -280,6 +280,8 @@ export function fitQinModel4(
     : null;
   const warnings: string[] = [];
   if (!converged) warnings.push('Optimizer stopped without satisfying the convergence criterion; inspect initial rates and identifiability.');
+  const boundaryRates = rateKeys.filter((_, i) => theta[i] <= Math.log(1e-8) + 1e-6 || theta[i] >= Math.log(10) - 1e-6);
+  if (boundaryRates.length) warnings.push('Rate estimates reached optimizer bounds: ' + boundaryRates.join(', ') + '; treat these as boundary-limited, not precise point estimates.');
   if (degreesOfFreedom <= 0) warnings.push('Non-positive residual degrees of freedom; uncertainty statistics are not defined.');
   if (statistics) warnings.push(...statistics.warnings);
   if (excludedZeroStandardDeviationCount) warnings.push(excludedZeroStandardDeviationCount + ' zero-SD observations were excluded from the weighted objective by explicit policy.');
