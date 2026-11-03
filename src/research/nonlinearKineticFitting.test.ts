@@ -120,6 +120,57 @@ test('multi-step nonlinear mass-action kinetic fitting', async t => {
     }
   });
 
+  await t.test('fits a stiff reversible relaxation and slow-drain network against independent SciPy BDF', () => {
+    const fixture = JSON.parse(readFileSync(new URL('../../scripts/benchmarks/fixtures/stiff-reversible-slow-drain-fit.json', import.meta.url), 'utf8'));
+    const mechanism = {
+      speciesIds: fixture.species_ids,
+      initialConcentrations: fixture.initial_concentrations,
+      reactions: fixture.reactions.map((reaction: any) => ({
+        id: reaction.id,
+        reactants: reaction.reactants.map((term: any) => ({ speciesId: term.species_id, coefficient: term.coefficient })),
+        products: reaction.products.map((term: any) => ({ speciesId: term.species_id, coefficient: term.coefficient })),
+      })),
+    };
+    const observations = fixture.times_seconds.flatMap((timeSeconds: number, timeIndex: number) =>
+      fixture.species_ids.map((speciesId: string, speciesIndex: number) => ({
+        timeSeconds, speciesId,
+        value: fixture.observed_concentrations[timeIndex][speciesIndex],
+        standardDeviation: fixture.standard_deviation,
+      })),
+    );
+    const parameters = ['forward', 'reverse', 'drain'].map((reactionId, index) => ({
+      reactionId,
+      initialGuess: fixture.fit.initial_guess[index],
+      lowerBound: fixture.fit.lower_bounds[index],
+      upperBound: fixture.fit.upper_bounds[index],
+      units: 's^-1',
+    }));
+    const fit = fitMassActionMechanism(mechanism, parameters, observations, {
+      integrator: 'adaptive-implicit',
+      adaptiveImplicitOptions: {
+        relativeTolerance: fixture.fit.relative_tolerance,
+        absoluteTolerance: fixture.fit.absolute_tolerance,
+        maximumSteps: fixture.fit.maximum_steps,
+        maximumNewtonIterations: fixture.fit.maximum_newton_iterations,
+      },
+      maxIterations: fixture.fit.maximum_iterations,
+      convergenceTolerance: fixture.fit.convergence_tolerance,
+    });
+    const reference = fixture.scipy_reference;
+    assert.equal(fit.integrator, 'adaptive-implicit');
+    assert.equal(fit.converged, true, fit.warnings.join('; '));
+    assert.equal(fit.integrationFailures, 0, JSON.stringify({ diagnostics: fit.integrationDiagnostics, warnings: fit.warnings }));
+    for (const reactionId of ['forward', 'reverse', 'drain']) {
+      const tolerance = reference.parameter_tolerance[['forward', 'reverse', 'drain'].indexOf(reactionId)];
+      assert.ok(Math.abs(fit.parameterEstimates[reactionId] - reference.parameters[reactionId]) <= tolerance,
+        reactionId + ' parameter estimate differs from SciPy BDF: ' + JSON.stringify(fit.parameterEstimates));
+    }
+    assert.ok(fit.weightedResidualSumSquares <= reference.weighted_residual_sum_squares + reference.weighted_rss_tolerance);
+    assert.ok(fit.integrationDiagnostics);
+    assert.ok(fit.integrationDiagnostics.acceptedSteps > 0);
+    assert.ok(fit.fitted.every(row => Math.abs(row.predicted - row.observed) <= reference.prediction_tolerance));
+  });
+
   await t.test('matches the pinned SciPy reference on the shared weighted-observation fixture', () => {
     const fixture = JSON.parse(readFileSync(new URL('../../scripts/benchmarks/fixtures/sequential-kinetic-fit.json', import.meta.url), 'utf8'));
     const mechanism = {
