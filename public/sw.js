@@ -28,7 +28,8 @@ self.addEventListener('fetch', event => {
   const isAppShell = url.pathname === '/' || url.pathname === '/index.html';
   const isHashedAsset = url.pathname.startsWith('/assets/');
   const isRdkitAsset = url.pathname.startsWith('/vendor/rdkit/');
-  if (!isAppShell && !isHashedAsset && !isRdkitAsset) return;
+  const isRdkitWorker = url.pathname === '/rdkit-worker.js';
+  if (!isAppShell && !isHashedAsset && !isRdkitAsset && !isRdkitWorker) return;
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
