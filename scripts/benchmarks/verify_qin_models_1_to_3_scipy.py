@@ -154,6 +154,7 @@ for model, key, target, dof in [
     results[model] = {
         "scipy": {k: v for k, v in scipy_fit.items() if k != "localScaleParameters"},
         "typescriptReducedStatistic": ts_fit["reducedChiSquare"],
+        "typescriptAlfaBlankStandardErrors": ts_fit.get("alfaBlankStandardErrors"),
         "publishedReducedStatistic": target,
     }
 
