@@ -64,7 +64,6 @@ function profile(model: QinModel4Variant, parameter: string) {
     : baseline.rateConstantsPerHour[group]?.[parameterName === 'k1PerHour' ? 'k1PerHour' : 'k2PerHour'];
   if (estimate === undefined || !Number.isFinite(estimate)) throw new Error('Could not resolve baseline parameter ' + parameter);
   const profileEstimate = Math.min(10, Math.max(1e-8, estimate));
-  const profileEstimate = Math.min(10, Math.max(1e-8, estimate));
   const n = baseline.includedObservationCount;
   const cutoff = 3.841458820694124;
   const rates = startsFromFit(baseline);
