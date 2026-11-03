@@ -118,10 +118,14 @@ jobs:
         if: steps.qin_data.outcome == 'success'
         run: python scripts/benchmarks/verify_qin_models_1_to_3_scipy.py /tmp/qin-2018/QinTratnyek18-H2vsTime-Data.csv /tmp/qin-models123-typescript.json
       - name: Install pinned RDKit.js runtime for molecular smoke tests and local browser assets
-        run: npm install --no-save --package-lock=false @rdkit/rdkit@2026.9.1
+        run: npm install --no-save --package-lock=false @rdkit/rdkit@2026.9.1 playwright@1.56.1
       - name: Build application with same-origin RDKit assets
         run: bun run build
       - name: Verify locally staged RDKit JavaScript and WebAssembly assets
         run: node scripts/benchmarks/verify_rdkit_local_assets.mjs
+      - name: Install Chromium for deployed-runtime browser validation
+        run: npx playwright install --with-deps chromium
+      - name: Verify RDKit in Chromium with CSP and offline cache enabled
+        run: node scripts/benchmarks/verify_rdkit_browser.mjs
       - name: Verify RDKit canonical identity, stereochemistry, InChI and valence
         run: node scripts/benchmarks/verify_rdkit_runtime.mjs
