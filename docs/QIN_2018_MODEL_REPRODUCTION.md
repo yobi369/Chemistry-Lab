@@ -76,3 +76,9 @@ The same fitting API exposes the earlier alternatives described in the article:
 - **Model 3 — advanced phase replacement:** the integrated two-step sequence S₁ → S₂ → inactive products, with k₁, k₂ and r global by iron type and C local. The implementation uses the analytic equal-rate limit to avoid cancellation when k₁ ≈ k₂.
 
 All three implementations are currently covered by synthetic parameter-recovery tests. They are not yet fitted to the Zenodo observations; no paper-comparison statistics are claimed.
+
+## Local uncertainty diagnostics
+
+All four model fit results now expose a finite-difference sensitivity Jacobian diagnostic, local covariance matrix, parameter standard errors, parameter correlation matrix, identifiable rank and information condition number when the residual degrees of freedom are positive and the local information matrix is full rank. Singular or rank-deficient fits return null covariance/standard errors and an explicit warning instead of fabricated precision estimates.
+
+For unweighted fits, covariance is scaled by residual SSE divided by residual degrees of freedom. For standard-deviation-weighted fits, the supplied SDs are treated as fixed known observation uncertainties and covariance uses the inverse weighted information matrix without additional residual scaling. This is a local linear approximation; it does not replace profile likelihood, bootstrap or Bayesian uncertainty analysis, and the small replicate count behind some SD estimates remains a limitation.
