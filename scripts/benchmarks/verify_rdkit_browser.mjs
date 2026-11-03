@@ -95,7 +95,7 @@ try {
   const analyze = async () => {
     await page.getByRole('button', { name: 'Validate & identify molecule' }).click();
     try {
-      await page.getByText(/InChI=1S\\//).waitFor({ timeout: 15000 });
+      await page.getByText(/InChI=1S\//).waitFor({ timeout: 15000 });
     } catch (error) {
       const alert = await page.getByRole('alert').textContent().catch(() => 'No visible RDKit error message.');
       const csp = await page.evaluate(() => window.__cspViolations);
