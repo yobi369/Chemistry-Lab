@@ -1,3 +1,4 @@
+import { calculateLocalFitStatistics } from './localFitStatistics';
 import {
   QinExperimentSeries, QinIronType, QinModel4Options, QinModel4FitError,
 } from './qinHydrogenModel';
@@ -25,6 +26,12 @@ export interface QinAlternativeFit {
   readonly reducedChiSquare: number | null;
   readonly iterations: number;
   readonly converged: boolean;
+  readonly standardErrors: Readonly<Record<string, number>> | null;
+  readonly covarianceMatrix: readonly (readonly number[])[] | null;
+  readonly correlationMatrix: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
+  readonly identifiableParameterCount: number;
+  readonly locallyIdentifiable: boolean;
+  readonly informationConditionNumber: number;
   readonly warnings: readonly string[];
 }
 interface PreparedSeries extends QinExperimentSeries {
@@ -202,9 +209,42 @@ export function fitQinAlternativeModel(
   const parameterCount = keys.length + series.length, degreesOfFreedom = includedObservationCount - parameterCount;
   const weightedResidualSumSquares = options.weighting === 'standard-deviation' ? current.cost : null;
   const sumSquaredResiduals = fitted.reduce((sum, o) => sum + o.residualMicromoles ** 2, 0);
+  const parameterNames = [
+    ...keys.map(key => key.replace(':', '.').replace('k1', 'k1PerHour').replace('k2', 'k2PerHour')),
+    ...series.map(s => s.experimentId + '.localScale'),
+  ];
+  const parameterValues = [
+    ...theta.map(Math.exp),
+    ...series.map(s => current.scales[s.experimentId]),
+  ];
+  const residualAt = (values: readonly number[]) => {
+    const result: number[] = [];
+    prepared.forEach((s, seriesIndex) => {
+      const get = (name: string) => values[keys.indexOf(s.ironType + ':' + name)];
+      const p = {
+        k1: get('k1'),
+        k2: model === '3' ? get('k2') : 0,
+        ratio: model === '1' ? 1 : get('ratio'),
+      };
+      const scale = values[keys.length + seriesIndex];
+      s.observations.forEach((o, i) => {
+        const w = s.weights[i];
+        if (w === null) return;
+        result.push((o.hydrogenMicromoles - scale * basis(model, o.timeHours, p)) * Math.sqrt(w));
+      });
+    });
+    return result;
+  };
+  const covarianceScale = degreesOfFreedom > 0
+    ? (options.weighting === 'standard-deviation' ? 1 : current.cost / degreesOfFreedom)
+    : 1;
+  const statistics = degreesOfFreedom > 0
+    ? calculateLocalFitStatistics(parameterNames, parameterValues, residualAt, covarianceScale)
+    : null;
   const warnings: string[] = [];
   if (!converged) warnings.push('Optimizer stopped without satisfying the convergence criterion.');
   if (degreesOfFreedom <= 0) warnings.push('Non-positive degrees of freedom; uncertainty statistics are not defined.');
+  if (statistics) warnings.push(...statistics.warnings);
   if (excludedZeroStandardDeviationCount) warnings.push(excludedZeroStandardDeviationCount + ' zero-SD observations excluded by explicit policy.');
   return {
     model, equation: model === '1'
@@ -219,6 +259,13 @@ export function fitQinAlternativeModel(
     sumSquaredResiduals, weightedResidualSumSquares,
     reducedChiSquare: weightedResidualSumSquares !== null && degreesOfFreedom > 0
       ? weightedResidualSumSquares / degreesOfFreedom : null,
-    iterations, converged, warnings,
+    iterations, converged,
+    standardErrors: statistics?.standardErrors ?? null,
+    covarianceMatrix: statistics?.covarianceMatrix ?? null,
+    correlationMatrix: statistics?.correlationMatrix ?? null,
+    identifiableParameterCount: statistics?.identifiableParameterCount ?? 0,
+    locallyIdentifiable: statistics?.locallyIdentifiable ?? false,
+    informationConditionNumber: statistics?.informationConditionNumber ?? Number.POSITIVE_INFINITY,
+    warnings,
   };
 }
