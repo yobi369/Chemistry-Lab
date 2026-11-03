@@ -228,6 +228,9 @@ export function fitQinModel4(
       v + (i === k ? lambda * Math.max(normal[i][i], 1e-10) : 0)));
     const delta = solve(damped, gradient.map(v => -v));
     if (!delta) break;
+    if (Math.sqrt(dot(delta, delta)) < tolerance) {
+      converged = true; iterations++; break;
+    }
     const candidate = [...theta];
     freeIndices.forEach((index, i) => {
       candidate[index] = Math.max(Math.log(1e-8), Math.min(Math.log(10), theta[index] + delta[i]));
